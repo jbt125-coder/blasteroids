@@ -1,1 +1,1142 @@
+<!DOCTYPE html>
 
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ASTEROIDS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Orbitron','Courier New',monospace; touch-action:none; user-select:none; -webkit-user-select:none; }
+#gameCanvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; }
+
+#hud { position:fixed; top:0; left:0; right:0; pointer-events:none; z-index:10; display:flex; justify-content:space-between; align-items:flex-start; padding:14px 18px 0; }
+#livesDisplay { display:flex; gap:7px; align-items:center; min-width:90px; }
+#scoreBox { text-align:center; }
+#scoreLbl { font-size:9px; letter-spacing:3px; color:rgba(0,212,255,0.55); display:block; }
+#scoreVal { display:block; font-size:clamp(18px,4vw,26px); font-weight:700; color:#00d4ff; text-shadow:0 0 14px rgba(0,212,255,0.65); line-height:1.1; }
+#waveBox { text-align:right; min-width:90px; }
+#waveLbl { font-size:9px; letter-spacing:3px; color:rgba(255,170,0,0.55); display:block; }
+#waveVal { display:block; font-size:clamp(16px,3.5vw,22px); font-weight:700; color:#ffaa00; text-shadow:0 0 12px rgba(255,170,0,0.55); line-height:1.1; }
+
+/* Secondary HUD bars */
+#warpHud { position:fixed; top:55px; left:50%; transform:translateX(-50%); pointer-events:none; z-index:10; text-align:center; display:none; }
+#warpLbl { font-size:9px; letter-spacing:3px; color:rgba(0,255,180,0.6); display:block; margin-bottom:2px; }
+#warpVal { font-size:clamp(14px,3vw,20px); font-weight:700; color:#00ffaa; text-shadow:0 0 12px rgba(0,255,170,0.6); }
+
+#solarHud { position:fixed; top:55px; left:50%; transform:translateX(-50%); pointer-events:none; z-index:10; text-align:center; display:none; white-space:nowrap; }
+#solarLbl { font-size:9px; letter-spacing:3px; color:rgba(255,200,80,0.7); display:block; margin-bottom:2px; }
+#solarVal { font-size:clamp(12px,2.5vw,18px); font-weight:700; color:#ffcc44; text-shadow:0 0 12px rgba(255,200,0,0.6); }
+
+/* Alert banner for incoming asteroid */
+#alertBar {
+position:fixed; top:100px; left:50%; transform:translateX(-50%);
+pointer-events:none; z-index:25; text-align:center;
+opacity:0; transition:opacity 0.2s;
+}
+#alertBar.show { opacity:1; }
+#alertText { font-size:clamp(11px,2.5vw,15px); font-weight:700; letter-spacing:3px; color:#ff4400; text-shadow:0 0 18px rgba(255,80,0,0.8); }
+
+/* Wave banner */
+#waveBanner { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; z-index:20; opacity:0; transition:opacity 0.35s; }
+#waveBanner.show { opacity:1; }
+#wbTag { font-size:clamp(9px,2vw,11px); letter-spacing:5px; color:#00d4ff; margin-bottom:6px; }
+#wbMain { font-size:clamp(26px,7vw,52px); font-weight:900; color:#fff; text-shadow:0 0 30px rgba(0,212,255,0.5); letter-spacing:4px; }
+#wbSub { font-size:clamp(10px,2.2vw,13px); color:rgba(180,220,255,0.65); letter-spacing:2px; margin-top:6px; }
+
+#hiBar { position:fixed; bottom:8px; left:50%; transform:translateX(-50%); font-size:9px; letter-spacing:3px; color:rgba(255,200,0,0.3); pointer-events:none; z-index:10; }
+
+.screen { position:fixed; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px; z-index:50; }
+.screen.hidden { display:none; }
+#gameOverScreen { background:rgba(0,0,0,0.88); }
+.go-h { font-size:clamp(26px,8vw,58px); font-weight:900; color:#ff4444; letter-spacing:4px; text-shadow:0 0 40px rgba(255,60,60,0.55); margin-bottom:10px; }
+.go-sc { font-size:clamp(13px,3vw,20px); color:#fff; letter-spacing:2px; margin-bottom:5px; }
+.go-sc em { color:#00d4ff; font-style:normal; }
+.go-info { font-size:clamp(9px,2vw,12px); color:rgba(200,200,200,0.5); letter-spacing:2px; margin-bottom:28px; }
+.btn { pointer-events:all; background:transparent; border:2px solid #ff4444; color:#ff4444; font-family:‘Orbitron’,‘Courier New’,monospace; font-size:clamp(11px,3vw,15px); letter-spacing:4px; padding:15px 42px; cursor:pointer; border-radius:4px; text-transform:uppercase; -webkit-tap-highlight-color:transparent; animation:rpulse 2.2s ease-in-out infinite; }
+.btn:hover,.btn:active { background:rgba(255,68,68,0.15); box-shadow:0 0 28px rgba(255,68,68,0.45); transform:scale(1.04); animation:none; }
+@keyframes rpulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,68,68,0.3);} 50%{box-shadow:0 0 0 14px rgba(255,68,68,0);} }
+
+#touchControls { position:fixed; bottom:0; left:0; right:0; height:155px; z-index:15; display:none; pointer-events:none; }
+.abtn { position:absolute; pointer-events:all; background:rgba(0,0,0,0.5); border:2px solid rgba(0,212,255,0.38); border-radius:50%; color:rgba(0,212,255,0.85); font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; touch-action:none; transition:background 0.08s,border-color 0.08s; }
+.abtn.pressed,.abtn:active { background:rgba(0,212,255,0.2); border-color:rgba(0,212,255,0.9); box-shadow:0 0 18px rgba(0,212,255,0.45); }
+#bLeft   { width:66px; height:66px; bottom:62px; left:14px; }
+#bThrust { width:76px; height:76px; bottom:34px; left:98px; border-color:rgba(255,180,0,0.45); color:rgba(255,200,0,0.9); }
+#bRight  { width:66px; height:66px; bottom:62px; left:190px; }
+#bFire   { width:88px; height:88px; bottom:30px; right:18px; border-color:rgba(255,80,80,0.55); color:rgba(255,100,100,0.9); font-size:24px; }
+</style>
+
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud">
+  <div id="livesDisplay"></div>
+  <div id="scoreBox"><span id="scoreLbl">SCORE</span><span id="scoreVal">0</span></div>
+  <div id="waveBox"><span id="waveLbl">WAVE</span><span id="waveVal">1</span></div>
+</div>
+
+<div id="warpHud"><span id="warpLbl">WARP CORES DELIVERED</span><span id="warpVal">0 / 4</span></div>
+<div id="solarHud"><span id="solarLbl">PLANETARY DEFENSE</span><span id="solarVal">8 planets safe</span></div>
+
+<div id="alertBar"><div id="alertText">⚠ ASTEROID INCOMING — MERCURY ⚠</div></div>
+
+<div id="waveBanner">
+  <div id="wbTag">WAVE CLEAR</div>
+  <div id="wbMain">WAVE 2</div>
+  <div id="wbSub"></div>
+</div>
+
+<div id="hiBar">HI-SCORE: <span id="hiVal">0</span></div>
+
+<div id="touchControls">
+  <button class="abtn" id="bLeft">&#9664;</button>
+  <button class="abtn" id="bThrust">&#9650;</button>
+  <button class="abtn" id="bRight">&#9654;</button>
+  <button class="abtn" id="bFire">&#128293;</button>
+</div>
+
+<div class="screen hidden" id="gameOverScreen">
+  <div class="go-h">GAME OVER</div>
+  <div class="go-sc">SCORE: <em id="goSc">0</em></div>
+  <div class="go-info">REACHED WAVE <span id="goWv">1</span></div>
+  <button class="btn" id="restartBtn" style="margin-top:10px;">RETRY MISSION</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ══════════════════════════════════════════════════════════
+   CANVAS + RESIZE
+   ══════════════════════════════════════════════════════════ */
+var canvas=document.getElementById('gameCanvas');
+var ctx=canvas.getContext('2d');
+var W=0,H=0,CX=0,CY=0;
+function resize(){
+  W=canvas.width=window.innerWidth;
+  H=canvas.height=window.innerHeight;
+  CX=W/2; CY=H/2;
+  buildStars();
+}
+window.addEventListener('resize',resize);
+
+/* ── STARS ─────────────────────────────────────────────── */
+var bgStars=[];
+function buildStars(){
+  bgStars=[];
+  for(var i=0;i<240;i++) bgStars.push({
+    x:Math.random()*W, y:Math.random()*H,
+    r:Math.random()*1.3+0.2, a:Math.random()*0.55+0.1,
+    tw:Math.random()*Math.PI*2, ts:Math.random()*0.018+0.004
+  });
+}
+
+/* ── INPUT ─────────────────────────────────────────────── */
+var keys={};
+window.addEventListener('keydown',function(e){
+  keys[e.code]=true;
+  if(e.code==='Space') e.preventDefault();
+  if((e.code==='Space'||e.code==='Enter')&&gameOver) doRestart();
+});
+window.addEventListener('keyup',function(e){keys[e.code]=false;});
+var btn={left:false,right:false,thrust:false,fire:false};
+function bindBtn(id,k){
+  var el=document.getElementById(id);if(!el)return;
+  function dn(e){e.preventDefault();btn[k]=true;el.classList.add('pressed');}
+  function up(e){e.preventDefault();btn[k]=false;el.classList.remove('pressed');}
+  el.addEventListener('pointerdown',dn,{passive:false});
+  el.addEventListener('touchstart',dn,{passive:false});
+  el.addEventListener('pointerup',up,{passive:false});
+  el.addEventListener('touchend',up,{passive:false});
+  el.addEventListener('pointerleave',up,{passive:false});
+  el.addEventListener('touchcancel',up,{passive:false});
+}
+bindBtn('bLeft','left'); bindBtn('bRight','right');
+bindBtn('bThrust','thrust'); bindBtn('bFire','fire');
+var isTouchDev=('ontouchstart' in window||navigator.maxTouchPoints>0);
+
+/* ── UTILS ─────────────────────────────────────────────── */
+function rnd(a,b){return a+Math.random()*(b-a);}
+function rndI(a,b){return Math.floor(rnd(a,b+1));}
+function wrap(v,max){return((v%max)+max)%max;}
+function dst(ax,ay,bx,by){return Math.sqrt((ax-bx)*(ax-bx)+(ay-by)*(ay-by));}
+function hexRGB(h){
+  try{var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return r+','+g+','+b;}
+  catch(e){return'200,200,200';}
+}
+
+/* ── PALETTES ───────────────────────────────────────────── */
+var PALETTES=[
+  ['#ff6644','#ff8855','#ffaa77'],['#44aaff','#66ccff','#aaddff'],
+  ['#aa55ff','#cc88ff','#ddaaff'],['#ffdd44','#ffee88','#fffacc'],
+  ['#44ffaa','#88ffcc','#ccffee'],['#ff44aa','#ff88cc','#ffbbdd'],
+  ['#aaaaaa','#cccccc','#eeeeee'],['#ff9900','#ffbb44','#ffdd99']
+];
+function randCols(){return PALETTES[rndI(0,PALETTES.length-1)];}
+
+/* ══════════════════════════════════════════════════════════
+   WAVE ROTATION  1=Combat  2=Warp  3=Solar  (repeating)
+   ══════════════════════════════════════════════════════════ */
+function waveType(w){
+  var m=(w-1)%3;
+  if(m===0) return 'combat';
+  if(m===1) return 'warp';
+  return 'solar';
+}
+
+/* ── GAME STATE ─────────────────────────────────────────── */
+var score=0,hiScore=0,lives=3,wave=1;
+var gameActive=false,gameOver=false;
+var waveTrans=false,wvBannerTimer=0;
+var fireCool=0,fireLast=false;
+var ufoTimer=0,lastTime=0;
+var transitionShield=0;
+
+var ship={x:0,y:0,vx:0,vy:0,angle:0,thrusting:false,alive:true,invincible:0,trail:[],carrying:null};
+var asteroids=[],bullets=[],ufoBullets=[],particles=[],ufo=null;
+
+/* ══════════════════════════════════════════════════════════
+   WARP LEVEL STATE
+   ══════════════════════════════════════════════════════════ */
+var warpDrives=[], warpCenter={x:0,y:0,r:0}, warpsDelivered=0;
+var WARP_TOTAL=4, WARP_SHIELD_R=55, WARP_PICKUP_R=38, WARP_DELIVER_R=50, CENTER_R=42;
+
+function initWarpLevel(){
+  warpsDelivered=0; ship.carrying=null;
+  warpCenter={x:CX,y:CY,r:CENTER_R};
+  var mg=80;
+  var corners=[{x:mg,y:mg},{x:W-mg,y:mg},{x:mg,y:H-mg},{x:W-mg,y:H-mg}];
+  warpDrives=[];
+  for(var i=0;i<4;i++){
+    warpDrives.push({x:corners[i].x,y:corners[i].y,r:14,shieldR:WARP_SHIELD_R,
+      picked:false,delivered:false,angle:rnd(0,Math.PI*2),rotV:rnd(0.01,0.025),
+      pulseT:rnd(0,Math.PI*2),shieldFlash:0});
+  }
+  var lc=0; for(var k=0;k<asteroids.length;k++) if(asteroids[k].alive) lc++;
+  var want=3+Math.floor(wave/3);
+  for(var j=lc;j<want;j++){
+    var pos=safePos(CX,CY,120);
+    var a=rnd(0,Math.PI*2),s=rnd(0.4,0.9);
+    asteroids.push(makeAst(pos.x,pos.y,3,Math.cos(a)*s,Math.sin(a)*s,randCols()));
+  }
+  updateWarpHUD();
+}
+function updateWarpHUD(){document.getElementById('warpVal').textContent=warpsDelivered+' / '+WARP_TOTAL;}
+
+/* ══════════════════════════════════════════════════════════
+   SOLAR DEFENSE LEVEL STATE
+   Sun at center. 8 planets orbit at different radii.
+   Asteroids are queued: each has a target planet, waits
+   outside the system then homes toward it.
+   Player must intercept before it reaches the planet.
+   A planet with HP=0 is "cracked" — lose one life.
+   Clear all waves of asteroids to complete the level.
+   ══════════════════════════════════════════════════════════ */
+var PLANET_DEFS=[
+  {name:'Mercury', color:'#b0b0b0', r:7,  orbitR:0.10, speed:0.012, hp:3},
+  {name:'Venus',   color:'#e8c040', r:10, orbitR:0.16, speed:0.009, hp:3},
+  {name:'Earth',   color:'#4488ff', r:11, orbitR:0.22, speed:0.007, hp:3},
+  {name:'Mars',    color:'#dd5533', r:8,  orbitR:0.29, speed:0.005, hp:3},
+  {name:'Jupiter', color:'#cc8844', r:22, orbitR:0.39, speed:0.003, hp:4},
+  {name:'Saturn',  color:'#ddcc77', r:18, orbitR:0.50, speed:0.002, hp:4},
+  {name:'Uranus',  color:'#77ddee', r:14, orbitR:0.60, speed:0.0015,hp:3},
+  {name:'Neptune', color:'#4466cc', r:13, orbitR:0.70, speed:0.001, hp:3}
+];
+
+var solarPlanets=[];   // live planet objects with angle, x, y, hp, maxHp, hitFlash
+var solarQueue=[];     // upcoming asteroid attacks: {planet idx, delay ms remaining}
+var solarActive=[];    // active homing asteroids: {ast, targetPlanetIdx, phase, warningTimer}
+var solarKilled=0;     // asteroids destroyed this wave
+var solarTotal=0;      // total asteroids queued this wave
+var solarLostPlanet=false;
+var alertTimer=0;      // how long to show the alert bar
+var SUN_R=22;
+
+function initSolarLevel(){
+  solarLostPlanet=false;
+  // Build planets
+  var minDim=Math.min(W,H);
+  solarPlanets=[];
+  for(var i=0;i<PLANET_DEFS.length;i++){
+    var pd=PLANET_DEFS[i];
+    solarPlanets.push({
+      name:pd.name, color:pd.color, r:pd.r,
+      orbitR:pd.orbitR*minDim*0.46,
+      speed:pd.speed,
+      angle:rnd(0,Math.PI*2),
+      hp:pd.hp, maxHp:pd.hp,
+      hitFlash:0, cracked:false
+    });
+  }
+  // Queue asteroid attacks — number scales with wave
+  var round=Math.floor((wave-1)/3)+1; // which solar round
+  var totalAtk=Math.min(6+round*2, 18);
+  solarTotal=totalAtk;
+  solarKilled=0;
+  solarQueue=[];
+  solarActive=[];
+  // Space attacks out over ~40 seconds with random delay
+  var delay=3000;
+  for(var j=0;j<totalAtk;j++){
+    var pIdx=rndI(0,7);
+    solarQueue.push({planetIdx:pIdx, delay:delay});
+    delay+=rnd(1800,4500);
+  }
+  // Keep any existing free-floating asteroids from previous wave
+  // (clear only old homing ones — they're in solarActive)
+  // Regular asteroids array carries over
+  updateSolarHUD();
+  document.getElementById('alertBar').classList.remove('show');
+  alertTimer=0;
+}
+
+function updateSolarHUD(){
+  var safe=0;
+  for(var i=0;i<solarPlanets.length;i++) if(!solarPlanets[i].cracked) safe++;
+  document.getElementById('solarVal').textContent=safe+' planet'+(safe!==1?'s':'')+' safe';
+}
+
+function showAlert(text, dur){
+  document.getElementById('alertText').textContent=text;
+  document.getElementById('alertBar').classList.add('show');
+  alertTimer=dur||3000;
+}
+
+/* ── ASTEROID FACTORY ───────────────────────────────────── */
+function makeAst(x,y,size,vx,vy,cols){
+  var r=size===3?rnd(28,40):size===2?rnd(15,23):rnd(6,12);
+  var verts=rndI(7,12),offs=[];
+  for(var i=0;i<verts;i++) offs.push(rnd(0.6,1.0));
+  return{x:x,y:y,vx:vx,vy:vy,rot:rnd(0,Math.PI*2),
+    rotV:rnd(-0.015,0.015)*(4-size)*0.5,
+    r:r,size:size,verts:verts,offs:offs,cols:cols||randCols(),alive:true,
+    isSolar:false};
+}
+function splitAst(ast){
+  if(ast.size<=1)return;
+  var nc=randCols(),sb=1+(wave-1)*0.06;
+  for(var i=0;i<2;i++){
+    var a=rnd(0,Math.PI*2),s=rnd(0.9,1.9)*sb;
+    asteroids.push(makeAst(ast.x,ast.y,ast.size-1,Math.cos(a)*s,Math.sin(a)*s,nc));
+  }
+}
+
+function safePos(avoidX,avoidY,avoidR){
+  var x,y,tries=0;
+  do{x=rnd(30,W-30);y=rnd(30,H-30);tries++;}
+  while(dst(x,y,avoidX,avoidY)<avoidR&&tries<40);
+  return{x:x,y:y};
+}
+
+/* ── COMBAT WAVE SPAWN ──────────────────────────────────── */
+function spawnCombatWave(isFirst){
+  if(isFirst) asteroids=[];
+  bullets=[];ufoBullets=[];ufo=null;ufoTimer=0;
+  var lc=0; for(var k=0;k<asteroids.length;k++) if(asteroids[k].alive) lc++;
+  var round=Math.ceil(wave/3);
+  var count=Math.min(4+round*2,14);
+  var sm=1+(wave-1)*0.12;
+  var toSpawn=Math.max(0,count-lc);
+  for(var i=0;i<toSpawn;i++){
+    var pos,vx,vy;
+    if(round===1){
+      var side=i%4,spd=rnd(0.9,1.6);
+      if(side===0){pos={x:-30,y:rnd(60,H-60)};vx=0;vy=spd;}
+      else if(side===1){pos={x:W+30,y:rnd(60,H-60)};vx=0;vy=-spd;}
+      else if(side===2){pos={x:rnd(60,W-60),y:-30};vx=spd;vy=0;}
+      else{pos={x:rnd(60,W-60),y:H+30};vx=-spd;vy=0;}
+    } else if(round===2){
+      var a2=rnd(0,Math.PI*2),s2=rnd(0.7,1.5)*sm;
+      pos=safePos(ship.x,ship.y,150);vx=Math.cos(a2)*s2;vy=Math.sin(a2)*s2;
+    } else {
+      var a3=rnd(0,Math.PI*2),s3=rnd(1.2,2.3)*sm;
+      pos=safePos(ship.x,ship.y,150);vx=Math.cos(a3)*s3;vy=Math.sin(a3)*s3;
+    }
+    asteroids.push(makeAst(pos.x,pos.y,3,vx,vy,randCols()));
+  }
+}
+
+/* ── SHIP ────────────────────────────────────────────────── */
+function resetShip(toCenter){
+  if(toCenter){ship.x=CX;ship.y=CY;ship.vx=0;ship.vy=0;ship.angle=-Math.PI/2;}
+  ship.thrusting=false;ship.alive=true;ship.invincible=0;ship.trail=[];ship.carrying=null;
+}
+function grantTransitionShield(){
+  ship.alive=true;ship.carrying=null;ship.thrusting=false;ship.invincible=0;
+  transitionShield=5000;
+}
+
+/* ── UFO ─────────────────────────────────────────────────── */
+function spawnUFO(){
+  var fl=Math.random()<0.5;
+  ufo={x:fl?-30:W+30,y:rnd(H*0.12,H*0.88),vx:fl?rnd(0.9,1.8):-rnd(0.9,1.8),
+    wobT:0,r:18,shootTimer:rnd(1800,3000),alive:true};
+}
+function ufoFire(){
+  if(!ufo||!ufo.alive||!ship.alive)return;
+  var dx=ship.x-ufo.x,dy=ship.y-ufo.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+  var sp=rnd(-0.3,0.3),cs=Math.cos(sp),ss=Math.sin(sp);
+  ufoBullets.push({x:ufo.x,y:ufo.y,
+    vx:(dx/d)*cs*3.6-(dy/d)*ss*3.6,vy:(dx/d)*ss*3.6+(dy/d)*cs*3.6,life:80});
+}
+
+/* ── PARTICLES ───────────────────────────────────────────── */
+function spawnParts(x,y,n,cols,spd){
+  for(var i=0;i<n;i++){
+    var a=rnd(0,Math.PI*2),s=rnd(0.4,spd||3.5);
+    particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:1,decay:rnd(0.014,0.040),r:rnd(1.5,3.8),rgb:hexRGB(cols[rndI(0,cols.length-1)])});
+  }
+}
+
+/* ── LIVES HUD ───────────────────────────────────────────── */
+function updateLives(){
+  var el=document.getElementById('livesDisplay');el.innerHTML='';
+  for(var i=0;i<lives;i++){
+    var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('width','20');svg.setAttribute('height','24');svg.setAttribute('viewBox','-12 -16 24 26');
+    var poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points','0,-14 -9,10 -3,6 0,9 3,6 9,10');
+    poly.setAttribute('fill','none');poly.setAttribute('stroke','rgba(0,212,255,0.9)');poly.setAttribute('stroke-width','2');
+    svg.appendChild(poly);el.appendChild(svg);
+  }
+}
+
+/* ── BANNER ──────────────────────────────────────────────── */
+function showBanner(tag,main,sub,dur){
+  var el=document.getElementById('waveBanner');
+  document.getElementById('wbTag').textContent=tag;
+  document.getElementById('wbMain').textContent=main;
+  document.getElementById('wbSub').textContent=sub||'';
+  el.classList.add('show');wvBannerTimer=dur||2000;
+}
+
+/* ── WARP SHIELD REFLECT ─────────────────────────────────── */
+function reflectOff(ast,cx,cy,shieldR){
+  var dx=ast.x-cx,dy=ast.y-cy,d=Math.sqrt(dx*dx+dy*dy)||1;
+  var nx=dx/d,ny=dy/d;
+  var dot=ast.vx*nx+ast.vy*ny;
+  ast.vx-=2*dot*nx; ast.vy-=2*dot*ny;
+  var push=ast.r+shieldR+2;
+  ast.x=cx+nx*push; ast.y=cy+ny*push;
+}
+
+/* ── START / RESTART ─────────────────────────────────────── */
+function startGame(){
+  score=0;lives=3;wave=1;gameOver=false;
+  waveTrans=false;fireCool=0;ufoTimer=0;fireLast=false;transitionShield=0;
+  document.getElementById('scoreVal').textContent='0';
+  document.getElementById('waveVal').textContent='1';
+  document.getElementById('warpHud').style.display='none';
+  document.getElementById('solarHud').style.display='none';
+  document.getElementById('alertBar').classList.remove('show');
+  updateLives();
+  document.getElementById('gameOverScreen').classList.add('hidden');
+  gameActive=true;
+  asteroids=[];bullets=[];ufoBullets=[];particles=[];ufo=null;
+  solarActive=[];solarQueue=[];
+  spawnCombatWave(true);
+  resetShip(true);
+  showBanner('MISSION START','WAVE 1','PATROL PATTERN — SHOOT TO SCATTER',2200);
+}
+function doRestart(){ document.getElementById('gameOverScreen').classList.add('hidden'); startGame(); }
+function doGameOver(){
+  gameOver=true;gameActive=false;
+  if(score>hiScore){hiScore=score;document.getElementById('hiVal').textContent=hiScore;}
+  document.getElementById('goSc').textContent=score;
+  document.getElementById('goWv').textContent=wave;
+  document.getElementById('gameOverScreen').classList.remove('hidden');
+}
+function killShip(){
+  if(!ship.alive)return;
+  if(ship.carrying){ship.carrying.picked=false;ship.carrying=null;}
+  ship.alive=false;ship.trail=[];
+  spawnParts(ship.x,ship.y,22,['#00d4ff','#ffffff','#88eeff'],4.5);
+  lives--;updateLives();
+  if(lives<=0){setTimeout(doGameOver,1300);}
+  else{setTimeout(function(){resetShip(true);},1700);}
+}
+
+/* ══════════════════════════════════════════════════════════
+   UPDATE
+   ══════════════════════════════════════════════════════════ */
+function update(dt){
+  if(!gameActive)return;
+
+  /* Banner timer */
+  if(wvBannerTimer>0){wvBannerTimer-=dt;if(wvBannerTimer<=0)document.getElementById('waveBanner').classList.remove('show');}
+
+  /* Alert timer */
+  if(alertTimer>0){alertTimer-=dt;if(alertTimer<=0)document.getElementById('alertBar').classList.remove('show');}
+
+  var wt=waveType(wave);
+
+  /* ── WAVE COMPLETION ─────────────────────────────────── */
+  if(!waveTrans){
+    if(wt==='combat'){
+      var lc=0;for(var i=0;i<asteroids.length;i++)if(asteroids[i].alive)lc++;
+      if(lc===0&&!ufo){
+        waveTrans=true;wave++;document.getElementById('waveVal').textContent=wave;
+        var nt=waveType(wave);
+        var sub=nt==='warp'?'WARP CORES DETECTED — SHIELD ACTIVE':
+                  nt==='solar'?'SOLAR SYSTEM NEEDS YOU — SHIELD ACTIVE':'HOLD THE LINE — SHIELD ACTIVE';
+        showBanner('SECTOR CLEAR','WAVE '+wave,sub,2400);
+        setTimeout(function(){
+          var t=waveType(wave);
+          document.getElementById('warpHud').style.display=t==='warp'?'block':'none';
+          document.getElementById('solarHud').style.display=t==='solar'?'block':'none';
+          bullets=[];ufoBullets=[];ufo=null;ufoTimer=0;
+          if(t==='warp') initWarpLevel();
+          else if(t==='solar'){asteroids=[];solarActive=[];initSolarLevel();}
+          else spawnCombatWave(false);
+          grantTransitionShield();waveTrans=false;
+        },2600);return;
+      }
+    } else if(wt==='warp'){
+      if(warpsDelivered>=WARP_TOTAL){
+        waveTrans=true;wave++;document.getElementById('waveVal').textContent=wave;
+        score+=1000;document.getElementById('scoreVal').textContent=score;
+        var nt2=waveType(wave);
+        var sub2=nt2==='solar'?'SOLAR SYSTEM NEEDS YOU — SHIELD ACTIVE':'COMBAT INCOMING — SHIELD ACTIVE';
+        showBanner('WARP CORES DELIVERED','WAVE '+wave,sub2,2400);
+        setTimeout(function(){
+          var t2=waveType(wave);
+          document.getElementById('warpHud').style.display='none';
+          document.getElementById('solarHud').style.display=t2==='solar'?'block':'none';
+          bullets=[];ufoBullets=[];ufo=null;ufoTimer=0;
+          if(t2==='solar'){asteroids=[];solarActive=[];initSolarLevel();}
+          else spawnCombatWave(false);
+          grantTransitionShield();waveTrans=false;
+        },2600);return;
+      }
+    } else { // solar
+      // Done when all queued asteroids dealt with + none active
+      if(solarQueue.length===0&&solarActive.length===0){
+        var lc2=0;for(var ii=0;ii<asteroids.length;ii++)if(asteroids[ii].alive)lc2++;
+        if(lc2===0){
+          waveTrans=true;wave++;document.getElementById('waveVal').textContent=wave;
+          score+=800;document.getElementById('scoreVal').textContent=score;
+          showBanner('SOLAR SYSTEM DEFENDED','WAVE '+wave,'COMBAT INCOMING — SHIELD ACTIVE',2400);
+          setTimeout(function(){
+            document.getElementById('solarHud').style.display='none';
+            document.getElementById('warpHud').style.display='none';
+            document.getElementById('alertBar').classList.remove('show');
+            bullets=[];ufoBullets=[];ufo=null;ufoTimer=0;
+            solarActive=[];asteroids=[];
+            spawnCombatWave(false);
+            grantTransitionShield();waveTrans=false;
+          },2600);return;
+        }
+      }
+    }
+  }
+
+  /* ── UFO (combat waves only, later rounds) ───────────── */
+  if(wt==='combat'&&wave>=4&&!ufo){
+    ufoTimer+=dt;
+    var ud=Math.max(7000,22000-wave*1000);
+    if(ufoTimer>=ud){spawnUFO();ufoTimer=0;}
+  }
+
+  /* ── Transition shield ───────────────────────────────── */
+  if(transitionShield>0){transitionShield-=dt;if(transitionShield<0)transitionShield=0;}
+  var shielded=(transitionShield>0);
+
+  /* ── Fire ────────────────────────────────────────────── */
+  fireCool-=dt;
+  var fireNow=keys['Space']||btn.fire;
+  if(fireNow&&!fireLast&&fireCool<=0&&ship.alive){
+    bullets.push({x:ship.x+Math.cos(ship.angle)*18,y:ship.y+Math.sin(ship.angle)*18,
+      vx:ship.vx+Math.cos(ship.angle)*7.5,vy:ship.vy+Math.sin(ship.angle)*7.5,life:58});
+    fireCool=200;
+  }
+  fireLast=fireNow;
+
+  /* ── Ship ────────────────────────────────────────────── */
+  if(ship.alive){
+    if(keys['ArrowLeft']||keys['KeyA']||btn.left)  ship.angle-=0.065;
+    if(keys['ArrowRight']||keys['KeyD']||btn.right) ship.angle+=0.065;
+    var thr=keys['ArrowUp']||keys['KeyW']||btn.thrust;
+    ship.thrusting=thr;
+    if(thr){ship.vx+=Math.cos(ship.angle)*0.2;ship.vy+=Math.sin(ship.angle)*0.2;}
+    ship.vx*=0.985;ship.vy*=0.985;
+    var spd=Math.sqrt(ship.vx*ship.vx+ship.vy*ship.vy);
+    if(spd>7.5){ship.vx=ship.vx/spd*7.5;ship.vy=ship.vy/spd*7.5;}
+    ship.x=wrap(ship.x+ship.vx,W);ship.y=wrap(ship.y+ship.vy,H);
+    if(ship.invincible>0)ship.invincible-=dt/16;
+    ship.trail.push({x:ship.x,y:ship.y});
+    if(ship.trail.length>20)ship.trail.shift();
+  }
+
+  /* ── Bullets ─────────────────────────────────────────── */
+  for(var i=bullets.length-1;i>=0;i--){
+    var b=bullets[i];b.x=wrap(b.x+b.vx,W);b.y=wrap(b.y+b.vy,H);b.life--;
+    if(b.life<=0)bullets.splice(i,1);
+  }
+  for(var i=ufoBullets.length-1;i>=0;i--){
+    var ub=ufoBullets[i];ub.x+=ub.vx;ub.y+=ub.vy;ub.life--;
+    if(ub.life<=0||ub.x<-40||ub.x>W+40||ub.y<-40||ub.y>H+40)ufoBullets.splice(i,1);
+  }
+
+  /* ── UFO logic ───────────────────────────────────────── */
+  if(ufo&&ufo.alive){
+    ufo.x+=ufo.vx;ufo.wobT+=0.033;ufo.y+=Math.sin(ufo.wobT)*0.85;
+    ufo.shootTimer-=dt;if(ufo.shootTimer<=0){ufoFire();ufo.shootTimer=rnd(1400,2800);}
+    if(ufo.x<-90||ufo.x>W+90)ufo=null;
+    if(ufo){
+      for(var ai=asteroids.length-1;ai>=0;ai--){
+        var ast=asteroids[ai];if(!ast.alive)continue;
+        for(var bi=ufoBullets.length-1;bi>=0;bi--){
+          var ub2=ufoBullets[bi];if(ub2.life<=0)continue;
+          if(dst(ub2.x,ub2.y,ast.x,ast.y)<ast.r+4){
+            ufoBullets.splice(bi,1);ast.alive=false;spawnParts(ast.x,ast.y,9,ast.cols,3.0);splitAst(ast);break;
+          }
+        }
+      }
+    }
+    if(ufo){
+      for(var ai2=asteroids.length-1;ai2>=0;ai2--){
+        var ast2=asteroids[ai2];if(!ast2.alive)continue;
+        if(dst(ufo.x,ufo.y,ast2.x,ast2.y)<ufo.r+ast2.r-5){
+          spawnParts(ufo.x,ufo.y,18,['#dd44ff','#ff88ff','#ffffff'],4.5);
+          spawnParts(ast2.x,ast2.y,10,ast2.cols,3.0);
+          ufo=null;ufoTimer=0;ast2.alive=false;splitAst(ast2);break;
+        }
+      }
+    }
+    if(ufo&&ufo.alive){
+      for(var bi2=bullets.length-1;bi2>=0;bi2--){
+        if(bullets[bi2].life<=0)continue;
+        if(dst(bullets[bi2].x,bullets[bi2].y,ufo.x,ufo.y)<ufo.r+4){
+          bullets.splice(bi2,1);score+=500;document.getElementById('scoreVal').textContent=score;
+          spawnParts(ufo.x,ufo.y,20,['#dd44ff','#ff88ff','#ffffff','#ffaaff'],5);
+          ufo=null;ufoTimer=0;break;
+        }
+      }
+    }
+    if(ufo&&ufo.alive&&ship.alive&&ship.invincible<=0&&!shielded){
+      for(var ubi=ufoBullets.length-1;ubi>=0;ubi--){
+        if(ufoBullets[ubi].life<=0)continue;
+        if(dst(ufoBullets[ubi].x,ufoBullets[ubi].y,ship.x,ship.y)<13){
+          ufoBullets.splice(ubi,1);killShip();return;
+        }
+      }
+      if(ufo&&dst(ufo.x,ufo.y,ship.x,ship.y)<ufo.r+10){killShip();return;}
+    }
+  }
+
+  /* ── Solar level update ──────────────────────────────── */
+  if(wt==='solar'){
+    // Orbit planets around sun (center)
+    for(var pi=0;pi<solarPlanets.length;pi++){
+      var pl=solarPlanets[pi];
+      pl.angle+=pl.speed*(dt/16);
+      pl.x=CX+Math.cos(pl.angle)*pl.orbitR;
+      pl.y=CY+Math.sin(pl.angle)*pl.orbitR;
+      if(pl.hitFlash>0)pl.hitFlash-=dt;
+    }
+
+    // Tick queued attacks
+    for(var qi=solarQueue.length-1;qi>=0;qi--){
+      var q=solarQueue[qi];
+      q.delay-=dt;
+      if(q.delay<=0){
+        // Launch this asteroid toward target planet
+        var tpl=solarPlanets[q.planetIdx];
+        // Spawn from random edge far from center
+        var ang=rnd(0,Math.PI*2);
+        var edgeDist=Math.max(W,H)*0.55;
+        var sx=CX+Math.cos(ang)*edgeDist;
+        var sy=CY+Math.sin(ang)*edgeDist;
+        // Clamp to just outside screen
+        sx=Math.max(-60,Math.min(W+60,sx));
+        sy=Math.max(-60,Math.min(H+60,sy));
+        var na=makeAst(sx,sy,3,0,0,randCols());
+        na.isSolar=true;
+        asteroids.push(na);
+        solarActive.push({ast:na,planetIdx:q.planetIdx});
+        // Show warning
+        showAlert('⚠  ASTEROID INCOMING: '+tpl.name.toUpperCase()+'  ⚠', 3500);
+        solarQueue.splice(qi,1);
+      }
+    }
+
+    // Update homing asteroids
+    for(var si=solarActive.length-1;si>=0;si--){
+      var sa=solarActive[si];
+      var ast=sa.ast;
+      if(!ast||!ast.alive){solarActive.splice(si,1);continue;}
+      var tpl2=solarPlanets[sa.planetIdx];
+
+      // Gradually home toward target planet
+      var dx=tpl2.x-ast.x, dy=tpl2.y-ast.y;
+      var d=Math.sqrt(dx*dx+dy*dy)||1;
+      var targetSpd=1.4+wave*0.05;
+      var accel=0.025;
+      ast.vx+=(dx/d)*targetSpd*accel;
+      ast.vy+=(dy/d)*targetSpd*accel;
+      // Cap speed
+      var as=Math.sqrt(ast.vx*ast.vx+ast.vy*ast.vy)||1;
+      if(as>targetSpd){ast.vx=ast.vx/as*targetSpd;ast.vy=ast.vy/as*targetSpd;}
+
+      // Check if reached the planet
+      if(d<tpl2.r+ast.r+4){
+        // Hit the planet!
+        ast.alive=false;
+        spawnParts(tpl2.x,tpl2.y,28,['#ff4400','#ff8800','#ffcc44','#ffffff'],5);
+        tpl2.hp--;tpl2.hitFlash=600;
+        if(tpl2.hp<=0&&!tpl2.cracked){
+          tpl2.cracked=true;
+          tpl2.hp=0;
+          updateSolarHUD();
+          showAlert('✘  '+tpl2.name.toUpperCase()+' DESTROYED!',4000);
+          // Lose a life for losing a planet
+          lives--;updateLives();
+          if(lives<=0){setTimeout(doGameOver,1300);return;}
+        } else {
+          updateSolarHUD();
+        }
+        solarActive.splice(si,1);
+      }
+    }
+  }
+
+  /* ── Asteroids (all modes) ───────────────────────────── */
+  for(var ai3=asteroids.length-1;ai3>=0;ai3--){
+    var ast3=asteroids[ai3];if(!ast3.alive)continue;
+
+    // Solar homing asteroids move themselves above; free ones wrap normally
+    if(!ast3.isSolar){
+      ast3.x=wrap(ast3.x+ast3.vx,W);
+      ast3.y=wrap(ast3.y+ast3.vy,H);
+    } else {
+      ast3.x+=ast3.vx; ast3.y+=ast3.vy;
+      // Remove if way offscreen (escaped)
+      if(ast3.x<-200||ast3.x>W+200||ast3.y<-200||ast3.y>H+200){
+        ast3.alive=false;continue;
+      }
+    }
+    ast3.rot+=ast3.rotV;
+
+    // Warp drive shield deflection
+    if(wt==='warp'){
+      for(var wi=0;wi<warpDrives.length;wi++){
+        var wd=warpDrives[wi];if(wd.delivered)continue;
+        if(dst(ast3.x,ast3.y,wd.x,wd.y)<wd.shieldR+ast3.r){
+          reflectOff(ast3,wd.x,wd.y,wd.shieldR);
+          wd.shieldFlash=300;spawnParts(ast3.x,ast3.y,4,['#00ffaa','#88ffdd'],2.0);
+        }
+      }
+    }
+
+    // Player bullet hits asteroid
+    for(var bi3=bullets.length-1;bi3>=0;bi3--){
+      if(bullets[bi3].life<=0)continue;
+      if(dst(bullets[bi3].x,bullets[bi3].y,ast3.x,ast3.y)<ast3.r+4){
+        bullets.splice(bi3,1);ast3.alive=false;
+        var pts=ast3.size===3?20:ast3.size===2?50:100;
+        if(ast3.isSolar)pts=150; // bonus for solar intercept
+        score+=pts;document.getElementById('scoreVal').textContent=score;
+        spawnParts(ast3.x,ast3.y,12,ast3.cols,3.5);
+        if(!ast3.isSolar)splitAst(ast3);
+        // Remove from solarActive if it was a homing asteroid
+        for(var sai=solarActive.length-1;sai>=0;sai--){
+          if(solarActive[sai].ast===ast3){solarActive.splice(sai,1);break;}
+        }
+        break;
+      }
+    }
+
+    // Asteroid hits ship
+    if(ast3.alive&&ship.alive&&ship.invincible<=0&&!shielded){
+      if(dst(ship.x,ship.y,ast3.x,ast3.y)<ast3.r+10){killShip();return;}
+    }
+  }
+  asteroids=asteroids.filter(function(a){return a.alive;});
+
+  /* ── Warp level logic ────────────────────────────────── */
+  if(wt==='warp'&&ship.alive){
+    for(var wi2=0;wi2<warpDrives.length;wi2++){
+      var wd2=warpDrives[wi2];
+      wd2.angle+=wd2.rotV;wd2.pulseT+=0.05;
+      if(wd2.shieldFlash>0)wd2.shieldFlash-=dt;
+      if(wd2.delivered)continue;
+      if(!wd2.picked){
+        if(ship.carrying===null&&dst(ship.x,ship.y,wd2.x,wd2.y)<WARP_PICKUP_R){
+          wd2.picked=true;ship.carrying=wd2;
+          spawnParts(wd2.x,wd2.y,12,['#00ffaa','#ffffff','#aaffdd'],3.0);
+        }
+      } else if(ship.carrying===wd2){
+        wd2.x=ship.x+Math.cos(ship.angle+Math.PI)*22;
+        wd2.y=ship.y+Math.sin(ship.angle+Math.PI)*22;
+        if(dst(ship.x,ship.y,warpCenter.x,warpCenter.y)<WARP_DELIVER_R){
+          wd2.delivered=true;wd2.x=warpCenter.x+rnd(-16,16);wd2.y=warpCenter.y+rnd(-16,16);
+          ship.carrying=null;warpsDelivered++;score+=250;
+          document.getElementById('scoreVal').textContent=score;
+          spawnParts(warpCenter.x,warpCenter.y,22,['#00ffaa','#ffffff','#ffdd44'],4.0);
+          updateWarpHUD();
+        }
+      }
+    }
+  }
+
+  /* ── Particles ───────────────────────────────────────── */
+  for(var pi2=particles.length-1;pi2>=0;pi2--){
+    var p=particles[pi2];p.x+=p.vx;p.y+=p.vy;p.vx*=0.97;p.vy*=0.97;
+    p.life-=p.decay*(dt/16);if(p.life<=0)particles.splice(pi2,1);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DRAW
+   ══════════════════════════════════════════════════════════ */
+function drawStars(){
+  for(var i=0;i<bgStars.length;i++){
+    var s=bgStars[i];s.tw+=s.ts;
+    var a=s.a*(0.6+0.4*Math.sin(s.tw));
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,'+a+')';ctx.fill();
+  }
+}
+
+function drawAst(ast){
+  ctx.save();ctx.translate(ast.x,ast.y);ctx.rotate(ast.rot);
+  ctx.beginPath();
+  for(var i=0;i<ast.verts;i++){
+    var a=(i/ast.verts)*Math.PI*2,r=ast.r*ast.offs[i];
+    if(i===0)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+    else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  ctx.closePath();
+  try{
+    var g=ctx.createRadialGradient(-ast.r*0.3,-ast.r*0.3,0,0,0,ast.r);
+    g.addColorStop(0,ast.cols[0]+'cc');g.addColorStop(0.5,ast.cols[1]+'99');g.addColorStop(1,ast.cols[2]+'55');
+    ctx.fillStyle=g;
+  }catch(e){ctx.fillStyle=ast.cols[0];}
+  ctx.fill();
+  ctx.strokeStyle=ast.cols[0]+'bb';ctx.lineWidth=ast.isSolar?2.5:1.8;ctx.stroke();
+  // Solar homing asteroids get a red glow
+  if(ast.isSolar){
+    ctx.beginPath();ctx.arc(0,0,ast.r+6,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,80,0,0.4)';ctx.lineWidth=3;ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawShip(){
+  if(!ship.alive)return;
+  if(ship.invincible>0&&Math.floor(ship.invincible/8)%2===0)return;
+  for(var i=1;i<ship.trail.length;i++){
+    var t=i/ship.trail.length;
+    ctx.beginPath();ctx.moveTo(ship.trail[i-1].x,ship.trail[i-1].y);
+    ctx.lineTo(ship.trail[i].x,ship.trail[i].y);
+    ctx.strokeStyle='rgba(0,180,255,'+t*0.2+')';ctx.lineWidth=1.5;ctx.stroke();
+  }
+  ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.angle+Math.PI/2);
+  if(ship.thrusting){
+    var fl=14+Math.random()*10;
+    ctx.beginPath();ctx.moveTo(-6,10);ctx.lineTo(0,10+fl);ctx.lineTo(6,10);
+    ctx.strokeStyle='rgba(255,'+rndI(100,200)+',0,0.85)';ctx.lineWidth=3;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-3,10);ctx.lineTo(0,10+fl*0.5);ctx.lineTo(3,10);
+    ctx.strokeStyle='rgba(255,255,200,0.65)';ctx.lineWidth=1.5;ctx.stroke();
+  }
+  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(-10,10);ctx.lineTo(-4,6);ctx.lineTo(0,9);ctx.lineTo(4,6);ctx.lineTo(10,10);ctx.closePath();
+  ctx.fillStyle='rgba(0,22,42,0.92)';ctx.fill();
+  var sc=ship.carrying?'rgba(0,255,170,0.95)':'rgba(0,212,255,0.95)';
+  ctx.strokeStyle=sc;ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-5,4,0,Math.PI*2);
+  ctx.fillStyle=ship.carrying?'rgba(0,255,150,0.6)':'rgba(0,212,255,0.5)';ctx.fill();
+  ctx.beginPath();ctx.moveTo(-4,0);ctx.lineTo(-12,-8);ctx.lineTo(-10,4);ctx.fillStyle='rgba(0,175,220,0.38)';ctx.fill();
+  ctx.beginPath();ctx.moveTo(4,0);ctx.lineTo(12,-8);ctx.lineTo(10,4);ctx.fillStyle='rgba(0,175,220,0.38)';ctx.fill();
+  ctx.restore();
+  // Transition shield
+  if(transitionShield>0){
+    var frac=transitionShield/5000;
+    var pu=0.9+0.1*Math.sin(Date.now()*0.008);var shR=32*pu;
+    ctx.beginPath();ctx.arc(ship.x,ship.y,shR+8,0,Math.PI*2);
+    ctx.strokeStyle='rgba(100,200,255,0.10)';ctx.lineWidth=10;ctx.stroke();
+    ctx.beginPath();ctx.arc(ship.x,ship.y,shR,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,180,255,0.09)';ctx.fill();
+    ctx.beginPath();ctx.arc(ship.x,ship.y,shR,0,Math.PI*2);
+    ctx.strokeStyle='rgba(0,200,255,0.7)';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.beginPath();ctx.arc(ship.x,ship.y,shR+5,-Math.PI/2,-Math.PI/2+frac*Math.PI*2);
+    ctx.strokeStyle='rgba(0,255,220,0.85)';ctx.lineWidth=3;ctx.stroke();
+    ctx.fillStyle='rgba(0,230,255,0.8)';ctx.font='bold 11px Orbitron,monospace';ctx.textAlign='center';
+    ctx.fillText(Math.ceil(transitionShield/1000)+'s',ship.x,ship.y-shR-10);
+  }
+}
+
+function drawUFO(){
+  if(!ufo||!ufo.alive)return;
+  ctx.save();ctx.translate(ufo.x,ufo.y);
+  ctx.save();ctx.scale(1,0.44);ctx.beginPath();ctx.arc(0,7,18,0,Math.PI*2);ctx.restore();
+  ctx.fillStyle='rgba(170,50,210,0.75)';ctx.fill();
+  ctx.strokeStyle='rgba(220,100,255,0.88)';ctx.lineWidth=1.8;ctx.stroke();
+  ctx.save();ctx.scale(1,0.7);ctx.beginPath();ctx.arc(0,-4,10,Math.PI,0);ctx.restore();
+  ctx.fillStyle='rgba(220,180,255,0.4)';ctx.fill();ctx.strokeStyle='rgba(200,120,255,0.6)';ctx.lineWidth=1;ctx.stroke();
+  var t=Date.now();
+  for(var li=-1;li<=1;li++){
+    var on=Math.sin(t*0.005+li*2)>0;
+    ctx.beginPath();ctx.arc(li*7,5,2.5,0,Math.PI*2);
+    ctx.fillStyle=on?'rgba(255,200,0,0.95)':'rgba(100,80,0,0.3)';ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawWarpDrive(wd){
+  var pulse=0.75+0.25*Math.sin(wd.pulseT);
+  if(wd.delivered){
+    ctx.save();ctx.translate(wd.x,wd.y);
+    ctx.beginPath();ctx.arc(0,0,10,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,255,170,0.7)';ctx.fill();ctx.strokeStyle='rgba(0,255,200,0.9)';ctx.lineWidth=2;ctx.stroke();
+    ctx.restore();return;
+  }
+  var sa=wd.shieldFlash>0?0.55:0.18;
+  var sc=wd.shieldFlash>0?'rgba(0,255,180,':'rgba(0,200,255,';
+  ctx.beginPath();ctx.arc(wd.x,wd.y,wd.shieldR*pulse,0,Math.PI*2);
+  ctx.strokeStyle=sc+sa+')';ctx.lineWidth=wd.shieldFlash>0?3:1.5;ctx.stroke();
+  ctx.beginPath();ctx.arc(wd.x,wd.y,wd.shieldR*pulse,0,Math.PI*2);
+  ctx.fillStyle=sc+(sa*0.08)+')';ctx.fill();
+  ctx.strokeStyle=sc+(sa*0.4)+')';ctx.lineWidth=0.8;
+  for(var h=0;h<6;h++){
+    var ha=(h/6)*Math.PI*2+wd.angle;
+    ctx.beginPath();ctx.moveTo(wd.x,wd.y);ctx.lineTo(wd.x+Math.cos(ha)*wd.shieldR*0.7,wd.y+Math.sin(ha)*wd.shieldR*0.7);ctx.stroke();
+  }
+  ctx.save();ctx.translate(wd.x,wd.y);ctx.rotate(wd.angle);
+  ctx.beginPath();ctx.arc(0,0,wd.r,0,Math.PI*2);ctx.fillStyle='rgba(0,20,40,0.95)';ctx.fill();ctx.strokeStyle='rgba(0,255,200,0.9)';ctx.lineWidth=2.5;ctx.stroke();
+  try{var ig=ctx.createRadialGradient(0,0,0,0,0,wd.r);ig.addColorStop(0,'rgba(0,255,180,0.6)');ig.addColorStop(1,'rgba(0,80,120,0)');ctx.beginPath();ctx.arc(0,0,wd.r,0,Math.PI*2);ctx.fillStyle=ig;ctx.fill();}catch(e){}
+  for(var s=0;s<4;s++){var sa2=(s/4)*Math.PI*2;ctx.beginPath();ctx.moveTo(Math.cos(sa2)*5,Math.sin(sa2)*5);ctx.lineTo(Math.cos(sa2)*wd.r,Math.sin(sa2)*wd.r);ctx.strokeStyle='rgba(0,255,200,0.6)';ctx.lineWidth=1.5;ctx.stroke();}
+  ctx.restore();
+  if(ship.alive&&ship.carrying===null){
+    var dd=dst(ship.x,ship.y,wd.x,wd.y);
+    if(dd<WARP_SHIELD_R*1.6){
+      var hint=1-dd/(WARP_SHIELD_R*1.6);
+      ctx.beginPath();ctx.arc(wd.x,wd.y,WARP_PICKUP_R,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,100,'+(hint*0.7)+')';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);ctx.stroke();ctx.setLineDash([]);
+      if(dd<WARP_PICKUP_R+20){ctx.fillStyle='rgba(255,255,100,'+(hint*0.8)+')';ctx.font='9px Orbitron,monospace';ctx.textAlign='center';ctx.fillText('GRAB',wd.x,wd.y-wd.shieldR-8);}
+    }
+  }
+}
+
+function drawWarpCenter(){
+  var now=Date.now(),pulse=0.85+0.15*Math.sin(now*0.004);
+  ctx.beginPath();ctx.arc(CX,CY,CENTER_R*1.6*pulse,0,Math.PI*2);ctx.strokeStyle='rgba(0,255,170,0.10)';ctx.lineWidth=12;ctx.stroke();
+  ctx.beginPath();ctx.arc(CX,CY,WARP_DELIVER_R,0,Math.PI*2);ctx.strokeStyle='rgba(0,255,180,0.42)';ctx.lineWidth=2;ctx.setLineDash([8,6]);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(CX,CY,CENTER_R,0,Math.PI*2);
+  try{var cg=ctx.createRadialGradient(CX,CY,0,CX,CY,CENTER_R);cg.addColorStop(0,'rgba(0,255,180,0.22)');cg.addColorStop(1,'rgba(0,100,80,0)');ctx.fillStyle=cg;}catch(e){ctx.fillStyle='rgba(0,200,150,0.1)';}
+  ctx.fill();ctx.strokeStyle='rgba(0,255,180,0.65)';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(now*0.001);
+  for(var s=0;s<8;s++){var sa=(s/8)*Math.PI*2;ctx.beginPath();ctx.moveTo(Math.cos(sa)*CENTER_R*0.55,Math.sin(sa)*CENTER_R*0.55);ctx.lineTo(Math.cos(sa)*CENTER_R*0.9,Math.sin(sa)*CENTER_R*0.9);ctx.strokeStyle='rgba(0,255,180,0.38)';ctx.lineWidth=1.5;ctx.stroke();}
+  ctx.restore();
+  ctx.fillStyle='rgba(0,255,180,0.6)';ctx.font='bold 10px Orbitron,monospace';ctx.textAlign='center';ctx.fillText('WARP NEXUS',CX,CY+CENTER_R+16);
+  if(warpsDelivered>0){ctx.fillStyle='rgba(0,255,180,0.9)';ctx.font='bold 14px Orbitron,monospace';ctx.textAlign='center';ctx.fillText(warpsDelivered+'/'+WARP_TOTAL,CX,CY+5);}
+}
+
+function drawSolarSystem(){
+  var now=Date.now();
+  // Draw sun
+  try{
+    var sg=ctx.createRadialGradient(CX,CY,0,CX,CY,SUN_R+12);
+    sg.addColorStop(0,'rgba(255,255,180,0.95)');
+    sg.addColorStop(0.4,'rgba(255,200,0,0.85)');
+    sg.addColorStop(0.7,'rgba(255,130,0,0.6)');
+    sg.addColorStop(1,'rgba(255,60,0,0)');
+    ctx.beginPath();ctx.arc(CX,CY,SUN_R+12,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();
+  }catch(e){}
+  ctx.beginPath();ctx.arc(CX,CY,SUN_R,0,Math.PI*2);
+  ctx.fillStyle='#fffbe0';ctx.fill();
+  ctx.strokeStyle='rgba(255,200,0,0.8)';ctx.lineWidth=2;ctx.stroke();
+  // Flicker corona
+  var corona=SUN_R+4+Math.sin(now*0.003)*3;
+  ctx.beginPath();ctx.arc(CX,CY,corona,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,180,0,0.2)';ctx.lineWidth=5;ctx.stroke();
+
+  // Draw orbit rings
+  for(var i=0;i<solarPlanets.length;i++){
+    var pl=solarPlanets[i];
+    ctx.beginPath();ctx.arc(CX,CY,pl.orbitR,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // Draw planets
+  for(var i=0;i<solarPlanets.length;i++){
+    var pl=solarPlanets[i];
+    var flash=pl.hitFlash>0;
+    var cracked=pl.cracked;
+
+    // Planet glow
+    try{
+      var pg=ctx.createRadialGradient(pl.x,pl.y,0,pl.x,pl.y,pl.r*2.2);
+      pg.addColorStop(0,pl.color+'44');pg.addColorStop(1,pl.color+'00');
+      ctx.beginPath();ctx.arc(pl.x,pl.y,pl.r*2.2,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill();
+    }catch(e){}
+
+    // Planet body
+    ctx.beginPath();ctx.arc(pl.x,pl.y,pl.r,0,Math.PI*2);
+    if(cracked){
+      ctx.fillStyle='rgba(60,30,20,0.9)';
+    } else if(flash){
+      ctx.fillStyle='#ff8844';
+    } else {
+      ctx.fillStyle=pl.color;
+    }
+    ctx.fill();
+    ctx.strokeStyle=cracked?'rgba(255,40,0,0.8)':flash?'#ffaa44':pl.color+'cc';
+    ctx.lineWidth=cracked?2.5:1.5;ctx.stroke();
+
+    // Saturn rings
+    if(pl.name==='Saturn'&&!cracked){
+      ctx.save();ctx.translate(pl.x,pl.y);ctx.scale(1,0.3);
+      ctx.beginPath();ctx.arc(0,0,pl.r*1.8,0,Math.PI*2);
+      ctx.strokeStyle='rgba(200,180,100,0.55)';ctx.lineWidth=4;ctx.stroke();
+      ctx.restore();
+    }
+
+    // HP bar
+    if(!cracked&&pl.maxHp>1){
+      var bw=pl.r*2.2, bh=3;
+      var bx=pl.x-bw/2, by=pl.y+pl.r+5;
+      ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(bx,by,bw,bh);
+      ctx.fillStyle=pl.hp===pl.maxHp?'#44ff88':pl.hp===1?'#ff4444':'#ffaa44';
+      ctx.fillRect(bx,by,bw*(pl.hp/pl.maxHp),bh);
+    }
+
+    // Planet name label
+    ctx.fillStyle=cracked?'rgba(255,80,0,0.7)':'rgba(255,255,255,0.45)';
+    ctx.font=(pl.r>15?'9px':'8px')+' Orbitron,monospace';ctx.textAlign='center';
+    ctx.fillText(cracked?'LOST':pl.name,pl.x,pl.y-pl.r-6);
+
+    // Threat line: draw a line from an incoming asteroid to this planet
+    for(var si=0;si<solarActive.length;si++){
+      if(solarActive[si].planetIdx!==i)continue;
+      var sa=solarActive[si];
+      var ast=sa.ast;
+      if(!ast||!ast.alive)continue;
+      ctx.beginPath();ctx.moveTo(ast.x,ast.y);ctx.lineTo(pl.x,pl.y);
+      var pct=Math.sin(now*0.006)*0.5+0.5;
+      ctx.strokeStyle='rgba(255,80,0,'+(0.15+pct*0.15)+')';ctx.lineWidth=1;ctx.setLineDash([4,8]);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+
+  // Navigation arrow toward most threatened planet (nearest incoming threat)
+  if(ship.alive&&solarActive.length>0){
+    // Find active that has shortest distance from ship
+    var best=null,bestD=99999;
+    for(var si2=0;si2<solarActive.length;si2++){
+      var saa=solarActive[si2];var ast2=saa.ast;
+      if(!ast2||!ast2.alive)continue;
+      var dd=dst(ship.x,ship.y,ast2.x,ast2.y);
+      if(dd<bestD){bestD=dd;best=ast2;}
+    }
+    if(best&&bestD>60){
+      var ang=Math.atan2(best.y-ship.y,best.x-ship.x);
+      var arR=36;
+      var arX=ship.x+Math.cos(ang)*arR,arY=ship.y+Math.sin(ang)*arR;
+      ctx.beginPath();ctx.moveTo(arX,arY);
+      ctx.lineTo(arX-12*Math.cos(ang-0.4),arY-12*Math.sin(ang-0.4));
+      ctx.lineTo(arX-12*Math.cos(ang+0.4),arY-12*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fillStyle='rgba(255,100,0,0.6)';ctx.fill();
+    }
+  }
+}
+
+function draw(now){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,8,1)';ctx.fillRect(0,0,W,H);
+
+  var wt=waveType(wave);
+  try{
+    var nb=ctx.createRadialGradient(CX,CY,0,CX,CY,Math.max(W,H)*0.7);
+    if(wt==='warp'){nb.addColorStop(0,'rgba(0,40,30,0.16)');nb.addColorStop(0.5,'rgba(0,15,10,0.08)');}
+    else if(wt==='solar'){nb.addColorStop(0,'rgba(30,20,5,0.20)');nb.addColorStop(0.5,'rgba(15,8,0,0.10)');}
+    else{nb.addColorStop(0,'rgba(0,28,55,0.16)');nb.addColorStop(0.5,'rgba(0,8,25,0.08)');}
+    nb.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=nb;ctx.fillRect(0,0,W,H);
+  }catch(e){}
+
+  drawStars();
+
+  if(wt==='warp'&&gameActive){drawWarpCenter();for(var wi=0;wi<warpDrives.length;wi++)drawWarpDrive(warpDrives[wi]);}
+  if(wt==='solar'&&gameActive) drawSolarSystem();
+
+  for(var i=0;i<asteroids.length;i++)if(asteroids[i].alive)drawAst(asteroids[i]);
+
+  for(var i=0;i<bullets.length;i++){
+    var b=bullets[i];
+    ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);ctx.fillStyle='rgba(0,230,255,0.95)';ctx.fill();
+    ctx.beginPath();ctx.arc(b.x,b.y,7,0,Math.PI*2);ctx.fillStyle='rgba(0,200,255,0.12)';ctx.fill();
+  }
+  for(var i=0;i<ufoBullets.length;i++){
+    var ub=ufoBullets[i];
+    ctx.beginPath();ctx.arc(ub.x,ub.y,3,0,Math.PI*2);ctx.fillStyle='rgba(255,70,220,0.95)';ctx.fill();
+    ctx.beginPath();ctx.arc(ub.x,ub.y,7,0,Math.PI*2);ctx.fillStyle='rgba(255,50,200,0.12)';ctx.fill();
+  }
+
+  drawUFO();drawShip();
+
+  for(var i=0;i<particles.length;i++){
+    var p=particles[i];
+    ctx.beginPath();ctx.arc(p.x,p.y,Math.max(0.1,p.r*p.life),0,Math.PI*2);
+    ctx.fillStyle='rgba('+p.rgb+','+p.life+')';ctx.fill();
+  }
+
+  // Wave 1 hint
+  if(wave===1&&gameActive){
+    var la=0;for(var i=0;i<asteroids.length;i++)if(asteroids[i].alive)la++;
+    if(la>0){ctx.fillStyle='rgba(0,212,255,0.13)';ctx.font='10px Orbitron,monospace';ctx.textAlign='center';ctx.fillText('PATROL PATTERN  —  SHOOT TO SCATTER',CX,44);}
+  }
+
+  // Warp arrows
+  if(wt==='warp'&&gameActive&&ship.alive){
+    if(ship.carrying===null){
+      var bestWD=null,bestWDD=99999;
+      for(var wi3=0;wi3<warpDrives.length;wi3++){var wd3=warpDrives[wi3];if(wd3.picked||wd3.delivered)continue;var dd3=dst(ship.x,ship.y,wd3.x,wd3.y);if(dd3<bestWDD){bestWDD=dd3;bestWD=wd3;}}
+      if(bestWD&&bestWDD>WARP_SHIELD_R*1.5){
+        var ang=Math.atan2(bestWD.y-ship.y,bestWD.x-ship.x);var arR=30;var arX=ship.x+Math.cos(ang)*arR,arY=ship.y+Math.sin(ang)*arR;
+        ctx.beginPath();ctx.moveTo(arX,arY);ctx.lineTo(arX-10*Math.cos(ang-0.4),arY-10*Math.sin(ang-0.4));ctx.lineTo(arX-10*Math.cos(ang+0.4),arY-10*Math.sin(ang+0.4));ctx.closePath();ctx.fillStyle='rgba(0,255,180,0.42)';ctx.fill();
+      }
+    } else {
+      var ang2=Math.atan2(CY-ship.y,CX-ship.x);var dd2=dst(ship.x,ship.y,CX,CY);
+      if(dd2>WARP_DELIVER_R+10){
+        var arR2=30;var arX2=ship.x+Math.cos(ang2)*arR2,arY2=ship.y+Math.sin(ang2)*arR2;
+        ctx.beginPath();ctx.moveTo(arX2,arY2);ctx.lineTo(arX2-10*Math.cos(ang2-0.4),arY2-10*Math.sin(ang2-0.4));ctx.lineTo(arX2-10*Math.cos(ang2+0.4),arY2-10*Math.sin(ang2+0.4));ctx.closePath();ctx.fillStyle='rgba(255,255,100,0.48)';ctx.fill();
+      }
+    }
+  }
+
+  // Solar: remaining threat count
+  if(wt==='solar'&&gameActive){
+    var rem=solarQueue.length+solarActive.length;
+    if(rem>0){
+      ctx.fillStyle='rgba(255,160,0,0.55)';ctx.font='10px Orbitron,monospace';ctx.textAlign='center';
+      ctx.fillText(rem+' THREAT'+(rem!==1?'S':'')+' REMAINING',CX,H-28);
+    }
+  }
+}
+
+/* ── LOOP ──────────────────────────────────────────────────── */
+function loop(now){
+  requestAnimationFrame(loop);
+  var dt=Math.min(now-lastTime,50);lastTime=now;
+  if(gameActive)update(dt);
+  draw(now);
+}
+
+/* ── WIRING ────────────────────────────────────────────────── */
+document.getElementById('restartBtn').addEventListener('click',doRestart);
+
+/* ── INIT ──────────────────────────────────────────────────── */
+resize();
+if(isTouchDev) document.getElementById('touchControls').style.display='block';
+document.getElementById('hiVal').textContent='0';
+lastTime=performance.now();
+requestAnimationFrame(loop);
+startGame();
+
+})();
+</script>
+
+</body>
+</html>
