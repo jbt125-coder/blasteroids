@@ -285,7 +285,7 @@ pointer-events:none;
   </div>
 </div>
 
-<div id="ytPlayerContainer" style="display:none;width:0;height:0;overflow:hidden;position:absolute;"></div>
+<div id="ytPlayerContainer" style="position:fixed;bottom:-10px;left:-10px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;"></div>
 
 <!-- Touch controls -->
 
@@ -351,7 +351,6 @@ pointer-events:none;
 </div>
 
 <script>
-(function(){
 "use strict";
 
 /* ════════════════════════════════════════════════════════════
@@ -637,34 +636,8 @@ function sfxAlienSpawn(){
   }catch(e){}
 }
 
-/* ── YouTube IFrame Player API ──────────────────────────── */
-var ytPlayer=null;
-var ytReady=false;
-var ytPendingPlay=false;
 
-// Called automatically by YouTube API when script loads
-window.onYouTubeIframeAPIReady=function(){
-  ytReady=true;
-  var id=ytId(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
-  if(!id)return;
-  ytPlayer=new YT.Player('ytPlayerContainer',{
-    height:'0',width:'0',
-    videoId:id,
-    playerVars:{autoplay:0,loop:1,playlist:id,playsinline:1,controls:0,mute:1},
-    events:{
-      onReady:function(e){
-        // Unmute and set volume as soon as ready
-        e.target.setVolume(Math.round(musicVolume*100));
-        if(ytPendingPlay){e.target.unMute();e.target.playVideo();ytPendingPlay=false;}
-      },
-      onStateChange:function(e){
-        // Auto-restart if ended
-        if(e.data===YT.PlayerState.ENDED)e.target.playVideo();
-      }
-    }
-  });
-};
-
+/* ── YouTube IFrame Player API — wired in global scope below IIFE ── */
 function ytId(url){
   try{var m=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m?m[1]:null;}catch(e){return null;}
 }
@@ -1742,9 +1715,40 @@ if(isTouchDev){
 document.getElementById('hiVal').textContent='0';
 lastTime=performance.now();
 requestAnimationFrame(loop);
-showAudioPerm(); // show permission modal first; startGame() called from modal buttons
+showAudioPerm();
 
-})();
+</script>
+
+<!-- YouTube API must call this at global scope — kept outside main script block -->
+
+<script>
+var ytReady=false;
+var ytPendingPlay=false;
+
+function onYouTubeIframeAPIReady(){
+  ytReady=true;
+  var id=ytId(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
+  if(!id)return;
+  ytPlayer=new YT.Player('ytPlayerContainer',{
+    height:'1',width:'1',
+    videoId:id,
+    playerVars:{autoplay:0,loop:1,playlist:id,playsinline:1,controls:0,mute:1},
+    events:{
+      onReady:function(e){
+        e.target.setVolume(Math.round(musicVolume*100));
+        if(ytPendingPlay){
+          e.target.unMute();
+          e.target.playVideo();
+          ytPendingPlay=false;
+          document.getElementById('musicStatus').textContent='▶ Playing';
+        }
+      },
+      onStateChange:function(e){
+        if(e.data===YT.PlayerState.ENDED)e.target.playVideo();
+      }
+    }
+  });
+}
 </script>
 
 </body>
