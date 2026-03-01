@@ -246,7 +246,7 @@ pointer-events:none;
 ```
 <div class="cogSection">
   <label>MUSIC — YOUTUBE LINK</label>
-  <input id="ytInput" type="text" placeholder="YouTube video or playlist URL..." value="https://youtube.com/playlist?list=PLVWEzQMtQoqMPRn_AMTlfrhYE-bN28lIb">
+  <input id="ytInput" type="text" placeholder="YouTube video or playlist URL..." value="https://youtube.com/playlist?list=PLVWEzQMtQoqMPRn_AMTlfrhYE-bN28lIb&si=_MIKAQR0PF2z35z4">
   <div class="cogRow">
     <button class="cogBtn" id="ytPlay">▶ PLAY</button>
     <button class="cogBtn" id="ytStop">■ STOP</button>
@@ -288,7 +288,7 @@ pointer-events:none;
   </div>
 </div>
 
-<div id="ytPlayerContainer" style="position:fixed;bottom:-10px;left:-10px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;"></div>
+<div id="ytPlayerContainer" style="position:fixed;left:-220px;bottom:0;width:200px;height:200px;pointer-events:none;"></div>
 
 <!-- Touch controls -->
 
@@ -507,7 +507,7 @@ var sfxEnabled=true;
 var sfxVolume=0.40;
 var musicVolume=0.60;
 var ytPlayer=null;
-var DEFAULT_YT='https://youtube.com/playlist?list=PLVWEzQMtQoqMPRn_AMTlfrhYE-bN28lIb';
+var DEFAULT_YT='https://youtube.com/playlist?list=PLVWEzQMtQoqMPRn_AMTlfrhYE-bN28lIb&si=_MIKAQR0PF2z35z4';
 
 function unlockAudio(withMusic){
   if(audioUnlocked)return;
@@ -649,7 +649,7 @@ function loadYT(url){
   var info=ytExtract(url||DEFAULT_YT);
   if(!info){document.getElementById('musicStatus').textContent='Invalid URL';return;}
   if(ytPlayer&&ytPlayer.loadVideoById){
-    if(info.type==='playlist'){ytPlayer.loadPlaylist({listType:'playlist',list:info.id});}
+    if(info.type==='playlist'){ytPlayer.loadPlaylist({list:info.id,listType:'playlist',index:0});}
     else{ytPlayer.loadVideoById(info.id);}
     ytPlayer.unMute();
     ytPlayer.setVolume(Math.round(musicVolume*100));
@@ -675,7 +675,7 @@ document.getElementById('ytPlay').addEventListener('click',function(){
   if(ytPlayer&&ytPlayer.unMute){
     var info=ytExtract(url);
     if(!info){document.getElementById('musicStatus').textContent='Invalid URL';return;}
-    if(info.type==='playlist'){ytPlayer.loadPlaylist({listType:'playlist',list:info.id});}
+    if(info.type==='playlist'){ytPlayer.loadPlaylist({list:info.id,listType:'playlist',index:0});}
     else{ytPlayer.loadVideoById(info.id);}
     ytPlayer.unMute();
     ytPlayer.setVolume(Math.round(musicVolume*100));
@@ -1813,12 +1813,23 @@ function onYouTubeIframeAPIReady(){
   ytReady=true;
   var info=ytExtract(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
   if(!info)return;
-  var pvars={autoplay:1,playsinline:1,controls:0,mute:1};
-  if(info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;}
-  else{pvars.loop=1;pvars.playlist=info.id;}
-  ytPlayer=new YT.Player('ytPlayerContainer',{
-    height:'1',width:'1',
-    videoId:info.type==='video'?info.id:undefined,
+
+  var pvars={autoplay:1,playsinline:1,controls:0,mute:1,origin:window.location.origin};
+  var vidId=undefined;
+
+  if(info.type==='playlist'){
+    pvars.listType='playlist';
+    pvars.list=info.id;
+    pvars.shuffle=1;
+  } else {
+    vidId=info.id;
+    pvars.loop=1;
+    pvars.playlist=info.id;
+  }
+
+  var playerConfig={
+    height:'200',
+    width:'200',
     playerVars:pvars,
     events:{
       onReady:function(e){
@@ -1831,10 +1842,13 @@ function onYouTubeIframeAPIReady(){
         }
       },
       onStateChange:function(e){
-        if(e.data===YT.PlayerState.ENDED)e.target.playVideo();
+        if(e.data===YT.PlayerState.ENDED||e.data===YT.PlayerState.UNSTARTED)e.target.playVideo();
       }
     }
-  });
+  };
+  if(vidId)playerConfig.videoId=vidId;
+
+  ytPlayer=new YT.Player('ytPlayerContainer',playerConfig);
 }
 </script>
 
