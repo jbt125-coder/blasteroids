@@ -667,11 +667,11 @@ function stopYT(){
 }
 
 document.getElementById('ytPlay').addEventListener('click',function(){
+  // AudioContext first
+  if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+  audioUnlocked=true;
   var url=document.getElementById('ytInput').value.trim()||DEFAULT_YT;
-  // Must be called directly in gesture for Safari
-  if(!audioUnlocked){
-    try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();audioUnlocked=true;}catch(e){}
-  }
   if(ytPlayer&&ytPlayer.unMute){
     var info=ytExtract(url);
     if(!info){document.getElementById('musicStatus').textContent='Invalid URL';return;}
@@ -711,25 +711,26 @@ function hideAudioPerm(){
   document.getElementById('audioPermModal').style.display='none';
 }
 document.getElementById('enableAudioBtn').addEventListener('click',function(){
-  hideAudioPerm();
-  // Unlock Web Audio (SFX) directly in gesture
-  if(!audioUnlocked){
+  // iOS requires AudioContext created as the VERY FIRST thing in the gesture handler
+  if(!audioCtx){
     try{
       audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-      if(audioCtx.state==='suspended')audioCtx.resume();
-      audioUnlocked=true;
     }catch(e){}
   }
-  // Unlock YouTube directly in gesture — mirrors Garbage Man's working pattern
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+  audioUnlocked=true;
+
+  // Unmute YouTube directly in same gesture
   if(ytPlayer&&ytPlayer.unMute){
     ytPlayer.unMute();
     ytPlayer.setVolume(Math.round(musicVolume*100));
     ytPlayer.playVideo();
     document.getElementById('musicStatus').textContent='▶ Playing';
   } else {
-    // YT API not ready yet — flag for onReady callback
     ytPendingPlay=true;
   }
+
+  hideAudioPerm();
   startGame();
 });
 document.getElementById('skipAudioBtn').addEventListener('click',function(){
