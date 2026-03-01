@@ -217,7 +217,10 @@ pointer-events:none;
         <li>Asteroids rain from above — move left/right and shoot them down</li>
         <li>Rocks that pass the bottom wrap back to the top at full size</li>
         <li>Medium rocks have a 20% chance to release a colored alien when destroyed</li>
-        <li>Red = fast dive-bomber · Blue = wide swooper · Green = zigzag · Yellow = sniper</li>
+        <li>Red = fast dive-bomber · shoots aimed blasts · Green = zigzag · shoots aimed blasts</li>
+        <li>Blue = swooper · drops gravity bombs straight down · dodge by moving</li>
+        <li>Yellow = dive-bomber · fires a rainbow tractor beam · lethal at close range</li>
+        <li>All aliens die in one shot — but watch for their weapons!</li>
       </ul>
     </div>
     <div class="hSection">
@@ -243,7 +246,7 @@ pointer-events:none;
 ```
 <div class="cogSection">
   <label>MUSIC — YOUTUBE LINK</label>
-  <input id="ytInput" type="text" placeholder="Paste YouTube URL..." value="https://youtu.be/s1elN4L2h44?si=EQK9pR8xnpTBm-">
+  <input id="ytInput" type="text" placeholder="YouTube video or playlist URL..." value="https://youtube.com/playlist?list=PLVWEzQMtQoqMPRn_AMTlfrhYE-bN28lIb">
   <div class="cogRow">
     <button class="cogBtn" id="ytPlay">▶ PLAY</button>
     <button class="cogBtn" id="ytStop">■ STOP</button>
@@ -504,7 +507,7 @@ var sfxEnabled=true;
 var sfxVolume=0.40;
 var musicVolume=0.60;
 var ytPlayer=null;
-var DEFAULT_YT='https://youtu.be/s1elN4L2h44';
+var DEFAULT_YT='https://youtube.com/playlist?list=PLVWEzQMtQoqMPRn_AMTlfrhYE-bN28lIb';
 
 function unlockAudio(withMusic){
   if(audioUnlocked)return;
@@ -643,31 +646,18 @@ function ytId(url){
 }
 
 function loadYT(url){
-  var id=ytId(url);
-  if(!id){document.getElementById('musicStatus').textContent='Invalid URL';return;}
+  var info=ytExtract(url||DEFAULT_YT);
+  if(!info){document.getElementById('musicStatus').textContent='Invalid URL';return;}
   if(ytPlayer&&ytPlayer.loadVideoById){
-    ytPlayer.loadVideoById(id);
+    if(info.type==='playlist'){ytPlayer.loadPlaylist({listType:'playlist',list:info.id});}
+    else{ytPlayer.loadVideoById(info.id);}
     ytPlayer.unMute();
     ytPlayer.setVolume(Math.round(musicVolume*100));
     ytPlayer.playVideo();
     document.getElementById('musicStatus').textContent='▶ Playing';
-  } else if(ytReady){
-    // Recreate player with new video
-    ytPlayer=new YT.Player('ytPlayerContainer',{
-      height:'0',width:'0',
-      videoId:id,
-      playerVars:{autoplay:1,loop:1,playlist:id,playsinline:1,controls:0,mute:0},
-      events:{
-        onReady:function(e){
-          e.target.setVolume(Math.round(musicVolume*100));
-          e.target.unMute();e.target.playVideo();
-          document.getElementById('musicStatus').textContent='▶ Playing';
-        },
-        onStateChange:function(e){if(e.data===YT.PlayerState.ENDED)e.target.playVideo();}
-      }
-    });
   } else {
-    document.getElementById('musicStatus').textContent='API loading…';
+    ytPendingPlay=true;
+    document.getElementById('musicStatus').textContent='Loading…';
   }
 }
 
@@ -839,10 +829,10 @@ var gAsteroids=[],gAliens=[],gKilled=0,G_TARGET=50;
 var gSpawnTimer=0,gSpawnInterval=1400,GALAGA_SHIP_Y=0;
 
 var ALIEN_TYPES={
-  red:   {color:'#ff3322',glow:'rgba(255,50,0,0.45)',   speed:3.0,style:'dive',   fireRate:2200,bspd:4.0},
-  blue:  {color:'#3388ff',glow:'rgba(50,100,255,0.45)', speed:1.7,style:'swoop',  fireRate:3200,bspd:2.8},
-  green: {color:'#44ee44',glow:'rgba(0,220,50,0.45)',   speed:2.1,style:'zigzag', fireRate:2600,bspd:3.2},
-  yellow:{color:'#ffee00',glow:'rgba(255,220,0,0.45)',  speed:1.1,style:'sniper', fireRate:1700,bspd:4.5}
+  red:   {color:'#ff3322',glow:'rgba(255,50,0,0.45)',   speed:3.0,style:'dive',   fireStyle:'shot',  fireRate:2200,bspd:4.0},
+  blue:  {color:'#3388ff',glow:'rgba(50,100,255,0.45)', speed:1.7,style:'swoop',  fireStyle:'bomb',  fireRate:2800,bspd:1.8},
+  green: {color:'#44ee44',glow:'rgba(0,220,50,0.45)',   speed:2.1,style:'zigzag', fireStyle:'shot',  fireRate:2400,bspd:3.2},
+  yellow:{color:'#ffee00',glow:'rgba(255,220,0,0.45)',  speed:1.4,style:'dive',   fireStyle:'beam',  fireRate:1800,bspd:0}
 };
 var ALIEN_KEYS=['red','blue','green','yellow'];
 
@@ -864,9 +854,9 @@ function spawnGAst(){
 function spawnAlien(x,y,type){
   var at=ALIEN_TYPES[type];
   gAliens.push({x:x,y:y,vx:0,vy:at.speed*0.4,type:type,at:at,
-    phase:'enter',phaseT:0,hp:2,fireTimer:at.fireRate*rnd(0.4,1.2),alive:true,
+    phase:'enter',phaseT:0,hp:1,fireTimer:at.fireRate*rnd(0.5,1.2),alive:true,
     diveTargetX:rnd(W*0.1,W*0.9),swoopA:0,zigDir:1,zigT:0,
-    sniperY:H*0.22+rnd(-35,35)});
+    beamActive:false,beamTimer:0,beamHue:0});
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -931,7 +921,7 @@ function ufoFire(){
   if(!ufo||!ufo.alive||!ship.alive)return;
   var dx=ship.x-ufo.x,dy=ship.y-ufo.y,d=Math.sqrt(dx*dx+dy*dy)||1;
   var sp=rnd(-0.3,0.3),cs=Math.cos(sp),ss=Math.sin(sp);
-  ufoBullets.push({x:ufo.x,y:ufo.y,vx:(dx/d)*cs*3.6-(dy/d)*ss*3.6,vy:(dx/d)*ss*3.6+(dy/d)*cs*3.6,life:80,col:null});
+  ufoBullets.push({x:ufo.x,y:ufo.y,vx:(dx/d)*cs*3.6-(dy/d)*ss*3.6,vy:(dx/d)*ss*3.6+(dy/d)*cs*3.6,life:80,col:null,fromUFO:true,isBomb:false,isBeam:false});
 }
 
 /* ── PARTICLES ─────────────────────────────────────────────── */
@@ -1008,7 +998,7 @@ function killShip(){
   spawnParts(ship.x,ship.y,22,['#00d4ff','#ffffff','#88eeff'],4.5);
   lives--;updateLives();
   if(lives<=0){setTimeout(doGameOver,1300);}
-  else{setTimeout(function(){resetShip(true);},1700);}
+  else{setTimeout(function(){resetShip(true);/* no shield on death respawn */},1700);}
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1144,7 +1134,9 @@ function update(dt){
     if(b.life<=0||b.y<-20||b.y>H+20)bullets.splice(i,1);
   }
   for(var i=ufoBullets.length-1;i>=0;i--){
-    var ub=ufoBullets[i];ub.x+=ub.vx;ub.y+=ub.vy;ub.life--;
+    var ub=ufoBullets[i];
+    if(wt==='galaga')break; // galaga handles its own bullets inline
+    ub.x+=ub.vx;ub.y+=ub.vy;ub.life--;
     if(ub.life<=0||ub.x<-40||ub.x>W+40||ub.y<-40||ub.y>H+40)ufoBullets.splice(i,1);
   }
 
@@ -1157,7 +1149,7 @@ function update(dt){
       for(var ai=asteroids.length-1;ai>=0;ai--){
         var ast=asteroids[ai];if(!ast.alive)continue;
         for(var bi=ufoBullets.length-1;bi>=0;bi--){
-          if(ufoBullets[bi].life<=0)continue;
+          if(ufoBullets[bi].life<=0||!ufoBullets[bi].fromUFO)continue;
           if(dst(ufoBullets[bi].x,ufoBullets[bi].y,ast.x,ast.y)<ast.r+4){ufoBullets.splice(bi,1);ast.alive=false;spawnParts(ast.x,ast.y,9,ast.cols,3.0);splitAst(ast);break;}
         }
       }
@@ -1288,83 +1280,102 @@ function update(dt){
       var at=al.at;
       al.phaseT+=dt;
 
-      // Movement AI by type
+      // ── Movement AI ────────────────────────────────────────
       if(at.style==='dive'){
+        // All dive-bombers: enter then chase ship, wrap through bottom back to top
         if(al.phase==='enter'){
-          al.y+=at.speed*(dt/16)*0.5;var tdx=al.diveTargetX-al.x;al.x+=tdx*0.04;
-          if(al.y>H*0.18)al.phase='attack';
+          al.y+=at.speed*(dt/16)*0.6;var tdx=al.diveTargetX-al.x;al.x+=tdx*0.04;
+          if(al.y>H*0.15)al.phase='attack';
         } else {
           var ddx=ship.x-al.x,ddy=ship.y-al.y,dd=Math.sqrt(ddx*ddx+ddy*ddy)||1;
-          al.vx+=(ddx/dd)*0.20;al.vy+=(ddy/dd)*0.20;
+          al.vx+=(ddx/dd)*0.22;al.vy+=(ddy/dd)*0.22;
           var aspd=Math.sqrt(al.vx*al.vx+al.vy*al.vy)||1;
           if(aspd>at.speed){al.vx=al.vx/aspd*at.speed;al.vy=al.vy/aspd*at.speed;}
           al.x+=al.vx;al.y+=al.vy;
         }
       } else if(at.style==='swoop'){
-        if(al.phase==='enter'){al.y+=at.speed*(dt/16)*0.4;if(al.y>H*0.18)al.phase='attack';}
+        if(al.phase==='enter'){al.y+=at.speed*(dt/16)*0.4;if(al.y>H*0.15)al.phase='attack';}
         else{
           al.swoopA+=0.022*(dt/16);
           al.x+=Math.sin(al.swoopA)*at.speed*1.5*(dt/16);
-          al.y+=Math.cos(al.swoopA*0.45)*at.speed*0.28*(dt/16)+0.18;
+          al.y+=at.speed*0.35*(dt/16);
           al.x=Math.max(20,Math.min(W-20,al.x));
-          if(al.y>H*0.55){al.y=H*0.13;al.swoopA+=Math.PI;}
         }
       } else if(at.style==='zigzag'){
         if(al.phase==='enter'){al.y+=at.speed*(dt/16)*0.5;if(al.y>H*0.12)al.phase='attack';}
         else{
-          al.zigT+=dt;if(al.zigT>rnd(380,680)){al.zigDir*=-1;al.zigT=0;}
-          al.x+=al.zigDir*at.speed*1.2*(dt/16);al.y+=at.speed*0.5*(dt/16);
+          al.zigT+=dt;if(al.zigT>rnd(320,580)){al.zigDir*=-1;al.zigT=0;}
+          al.x+=al.zigDir*at.speed*1.2*(dt/16);al.y+=at.speed*0.55*(dt/16);
           al.x=Math.max(20,Math.min(W-20,al.x));
-          if(al.y>H*0.62)al.y=H*0.08;
-        }
-      } else { // sniper / yellow
-        if(al.phase==='enter'){al.y+=at.speed*(dt/16)*0.55;if(al.y>=al.sniperY)al.phase='attack';}
-        else{
-          al.y+=(al.sniperY-al.y)*0.014;
-          al.x+=Math.sin(al.phaseT*0.0007)*at.speed*0.7*(dt/16);
-          al.x=Math.max(30,Math.min(W-30,al.x));
         }
       }
+      // All types: if they reach the bottom they wrap to the top like galaga asteroids
+      if(al.y>H+30){al.y=-30;al.x=rnd(40,W-40);al.vx=0;al.vy=at.speed*0.4;al.phase='enter';al.diveTargetX=rnd(W*0.1,W*0.9);}
+      if(al.x<-50)al.x=W+50;if(al.x>W+50)al.x=-50;
 
-      // Fire
+      // ── Weapons ─────────────────────────────────────────────
       al.fireTimer-=dt;
       if(al.fireTimer<=0){
-        al.fireTimer=at.fireRate+rnd(-250,250);
+        al.fireTimer=at.fireRate+rnd(-300,300);
         var fdx=ship.x-al.x,fdy=ship.y-al.y,fd=Math.sqrt(fdx*fdx+fdy*fdy)||1;
-        var spr=at.style==='sniper'?0.04:0.18;
-        var sp3=rnd(-spr,spr),cs3=Math.cos(sp3),ss3=Math.sin(sp3);
-        ufoBullets.push({x:al.x,y:al.y,
-          vx:(fdx/fd)*cs3*at.bspd-(fdy/fd)*ss3*at.bspd,
-          vy:(fdx/fd)*ss3*at.bspd+(fdy/fd)*cs3*at.bspd,
-          life:120,col:at.color});
+
+        if(at.fireStyle==='shot'){
+          // Aimed shot straight at player
+          var spr=0.12,sp3=rnd(-spr,spr),cs3=Math.cos(sp3),ss3=Math.sin(sp3);
+          ufoBullets.push({x:al.x,y:al.y,
+            vx:(fdx/fd)*cs3*at.bspd-(fdy/fd)*ss3*at.bspd,
+            vy:(fdx/fd)*ss3*at.bspd+(fdy/fd)*cs3*at.bspd,
+            life:110,col:at.color,isBomb:false,isBeam:false});
+
+        } else if(at.fireStyle==='bomb'){
+          // Drops straight down, no horizontal velocity — gravity affected
+          ufoBullets.push({x:al.x,y:al.y,
+            vx:0,vy:1.2,
+            life:180,col:'#3388ff',isBomb:true,isBeam:false,gravity:0.18});
+
+        } else if(at.fireStyle==='beam'){
+          // Tractor beam: doesn't move, stays at alien position, flickers rainbow
+          al.beamActive=true;al.beamTimer=1200; // beam lasts 1.2s
+        }
       }
 
-      // Player bullet hits alien
+      // Beam countdown
+      if(al.beamActive){
+        al.beamTimer-=dt;al.beamHue=(al.beamHue+8)%360;
+        if(al.beamTimer<=0)al.beamActive=false;
+        // Beam damages ship if in range
+        if(ship.alive&&ship.invincible<=0&&!shielded){
+          var bdx=ship.x-al.x,bdy=ship.y-al.y,bdd=Math.sqrt(bdx*bdx+bdy*bdy);
+          if(bdd<55){killShip();return;}
+        }
+      }
+
+      // ── Player bullet hits alien (1 shot kill) ──────────────
       var hitAl=false;
       for(var bi5=bullets.length-1;bi5>=0;bi5--){
         if(bullets[bi5].life<=0)continue;
         if(dst(bullets[bi5].x,bullets[bi5].y,al.x,al.y)<16){
-          bullets.splice(bi5,1);al.hp--;spawnParts(al.x,al.y,6,[at.color,'#fff'],3);
-          if(al.hp<=0){
-            al.alive=false;gKilled++;score+=300;document.getElementById('scoreVal').textContent=score;
-            spawnParts(al.x,al.y,18,[at.color,'#fff','#ffdd44'],5);
-          }
+          bullets.splice(bi5,1);
+          al.alive=false;al.hp=0;gKilled++;score+=300;document.getElementById('scoreVal').textContent=score;
+          spawnParts(al.x,al.y,18,[at.color,'#fff','#ffdd44'],5);
+          sfxExplosion(false);
           hitAl=true;break;
         }
       }
       if(!hitAl&&al.alive&&ship.alive&&ship.invincible<=0&&!shielded){
-        if(dst(ship.x,ship.y,al.x,al.y)<18){killShip();return;}
+        if(dst(ship.x,ship.y,al.x,al.y)<16){killShip();return;}
       }
-      if(al.y>H+60||al.x<-80||al.x>W+80)al.alive=false;
     }
     gAliens=gAliens.filter(function(a){return a.alive;});
 
-    // Alien bullets vs ship
-    if(ship.alive&&ship.invincible<=0&&!shielded){
-      for(var ubi2=ufoBullets.length-1;ubi2>=0;ubi2--){
-        if(dst(ufoBullets[ubi2].x,ufoBullets[ubi2].y,ship.x,ship.y)<13){
-          ufoBullets.splice(ubi2,1);killShip();return;
-        }
+    // ── Alien bullets update (bombs get gravity, nothing breaks asteroids) ──
+    for(var ubi2=ufoBullets.length-1;ubi2>=0;ubi2--){
+      var ub2=ufoBullets[ubi2];
+      if(ub2.isBomb)ub2.vy+=ub2.gravity;
+      ub2.x+=ub2.vx;ub2.y+=ub2.vy;ub2.life--;
+      if(ub2.life<=0||ub2.y>H+30||ub2.y<-30||ub2.x<-30||ub2.x>W+30){ufoBullets.splice(ubi2,1);continue;}
+      if(ship.alive&&ship.invincible<=0&&!shielded){
+        if(dst(ub2.x,ub2.y,ship.x,ship.y)<13){ufoBullets.splice(ubi2,1);killShip();return;}
       }
     }
   }
@@ -1659,9 +1670,39 @@ function draw(now){
     ctx.beginPath();ctx.arc(b.x,b.y,7,0,Math.PI*2);ctx.fillStyle='rgba(0,200,255,0.12)';ctx.fill();
   }
   for(var i=0;i<ufoBullets.length;i++){
-    var ub=ufoBullets[i],bc=ub.col||'rgba(255,70,220,0.95)';
-    ctx.beginPath();ctx.arc(ub.x,ub.y,3,0,Math.PI*2);ctx.fillStyle=bc;ctx.fill();
-    ctx.beginPath();ctx.arc(ub.x,ub.y,7,0,Math.PI*2);ctx.fillStyle='rgba(255,100,200,0.12)';ctx.fill();
+    var ub=ufoBullets[i];
+    if(ub.isBeam)continue; // beams drawn on alien directly
+    if(ub.isBomb){
+      // Blue bomb — round with a cross inside
+      ctx.beginPath();ctx.arc(ub.x,ub.y,6,0,Math.PI*2);ctx.fillStyle='rgba(50,130,255,0.92)';ctx.fill();
+      ctx.strokeStyle='rgba(150,200,255,0.7)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ub.x-4,ub.y);ctx.lineTo(ub.x+4,ub.y);ctx.moveTo(ub.x,ub.y-4);ctx.lineTo(ub.x,ub.y+4);ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.beginPath();ctx.arc(ub.x,ub.y,12,0,Math.PI*2);ctx.fillStyle='rgba(50,100,255,0.08)';ctx.fill();
+    } else {
+      var bc=ub.col||'rgba(255,70,220,0.95)';
+      ctx.beginPath();ctx.arc(ub.x,ub.y,3,0,Math.PI*2);ctx.fillStyle=bc;ctx.fill();
+      ctx.beginPath();ctx.arc(ub.x,ub.y,7,0,Math.PI*2);ctx.fillStyle='rgba(255,100,200,0.12)';ctx.fill();
+    }
+  }
+
+  // Draw tractor beams for yellow aliens
+  for(var ali2=0;ali2<gAliens.length;ali2++){
+    var al2=gAliens[ali2];if(!al2.alive||!al2.beamActive)continue;
+    var bh='hsl('+al2.beamHue+',100%,60%)';
+    var bh2='hsl('+((al2.beamHue+120)%360)+',100%,60%)';
+    // Beam cone from alien down toward ship
+    ctx.save();
+    var grad=ctx.createLinearGradient(al2.x,al2.y,ship.x,ship.y);
+    grad.addColorStop(0,bh);grad.addColorStop(0.5,bh2);grad.addColorStop(1,'rgba(255,255,255,0.05)');
+    ctx.beginPath();
+    ctx.moveTo(al2.x-8,al2.y);ctx.lineTo(ship.x-28,ship.y);ctx.lineTo(ship.x+28,ship.y);ctx.lineTo(al2.x+8,al2.y);
+    ctx.closePath();ctx.fillStyle=grad;ctx.globalAlpha=0.35+0.2*Math.sin(Date.now()*0.015);ctx.fill();
+    ctx.globalAlpha=1;
+    // Core beam line
+    ctx.beginPath();ctx.moveTo(al2.x,al2.y);ctx.lineTo(ship.x,ship.y);
+    ctx.strokeStyle=bh;ctx.lineWidth=2.5;ctx.globalAlpha=0.7;ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.restore();
   }
 
   drawUFO();drawShip();
@@ -1725,14 +1766,28 @@ showAudioPerm();
 var ytReady=false;
 var ytPendingPlay=false;
 
+function ytExtract(url){
+  // Returns {type:'video',id:''} or {type:'playlist',id:''}
+  try{
+    var pl=url.match(/[?&]list=([A-Za-z0-9_-]+)/);
+    if(pl)return{type:'playlist',id:pl[1]};
+    var v=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+    if(v)return{type:'video',id:v[1]};
+  }catch(e){}
+  return null;
+}
+
 function onYouTubeIframeAPIReady(){
   ytReady=true;
-  var id=ytId(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
-  if(!id)return;
+  var info=ytExtract(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
+  if(!info)return;
+  var pvars={autoplay:0,playsinline:1,controls:0,mute:1};
+  if(info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;}
+  else{pvars.loop=1;pvars.playlist=info.id;}
   ytPlayer=new YT.Player('ytPlayerContainer',{
     height:'1',width:'1',
-    videoId:id,
-    playerVars:{autoplay:0,loop:1,playlist:id,playsinline:1,controls:0,mute:1},
+    videoId:info.type==='video'?info.id:undefined,
+    playerVars:pvars,
     events:{
       onReady:function(e){
         e.target.setVolume(Math.round(musicVolume*100));
