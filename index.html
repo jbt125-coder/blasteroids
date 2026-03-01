@@ -58,20 +58,42 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
 #closeHelp{position:absolute;top:14px;right:16px;background:transparent;border:none;color:rgba(0,212,255,0.55);font-size:20px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent;}
 #closeHelp:hover{color:#00d4ff;}
 
-/* Music panel */
-#musicPanel{position:fixed;bottom:10px;left:10px;z-index:15;pointer-events:all;}
-#musicToggle{background:rgba(0,0,0,0.65);border:1px solid rgba(0,212,255,0.22);border-radius:7px;color:rgba(0,212,255,0.65);font-size:9px;letter-spacing:1px;padding:5px 9px;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:5px;}
-#musicToggle:hover{border-color:rgba(0,212,255,0.55);color:#00d4ff;}
-#musicDrawer{display:none;margin-top:5px;background:rgba(0,8,20,0.97);border:1px solid rgba(0,212,255,0.18);border-radius:8px;padding:12px;min-width:250px;}
-#musicDrawer.open{display:block;}
-#musicDrawer label{font-size:8px;letter-spacing:2px;color:rgba(0,212,255,0.55);display:block;margin-bottom:6px;}
-#ytInput{width:100%;background:rgba(0,18,38,0.95);border:1px solid rgba(0,212,255,0.22);border-radius:5px;color:#00d4ff;font-size:9px;padding:6px 8px;font-family:inherit;outline:none;}
+/* Cog menu popup */
+#cogMenuOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:70;display:none;align-items:center;justify-content:center;padding:16px;}
+#cogMenuOverlay.show{display:flex;}
+#cogCard{background:rgba(0,10,24,0.98);border:1px solid rgba(0,212,255,0.25);border-radius:14px;padding:22px 24px;max-width:340px;width:100%;position:relative;}
+#cogCard h2{font-size:11px;letter-spacing:4px;color:#00d4ff;margin-bottom:18px;text-align:center;}
+#closeCog{position:absolute;top:13px;right:15px;background:transparent;border:none;color:rgba(0,212,255,0.55);font-size:19px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent;}
+#closeCog:hover{color:#00d4ff;}
+.cogSection{margin-bottom:16px;}
+.cogSection label{font-size:8px;letter-spacing:2px;color:rgba(0,212,255,0.55);display:block;margin-bottom:6px;}
+#ytInput{width:100%;background:rgba(0,18,38,0.95);border:1px solid rgba(0,212,255,0.22);border-radius:5px;color:#00d4ff;font-size:9px;padding:7px 9px;font-family:inherit;outline:none;margin-bottom:7px;}
 #ytInput:focus{border-color:rgba(0,212,255,0.55);}
-#ytBtns{display:flex;gap:7px;margin-top:7px;}
-.ytBtn{flex:1;background:transparent;border:1px solid rgba(0,212,255,0.28);border-radius:5px;color:rgba(0,212,255,0.8);font-size:8px;letter-spacing:1px;padding:6px;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;}
-.ytBtn:hover{background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.6);}
-#musicStatus{font-size:8px;color:rgba(0,212,255,0.4);margin-top:6px;min-height:13px;}
+.cogRow{display:flex;gap:7px;margin-bottom:7px;}
+.cogBtn{flex:1;background:transparent;border:1px solid rgba(0,212,255,0.28);border-radius:5px;color:rgba(0,212,255,0.8);font-size:8px;letter-spacing:1px;padding:7px 4px;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.1s;}
+.cogBtn:hover,.cogBtn.active{background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.7);}
+#musicStatus{font-size:8px;color:rgba(0,212,255,0.4);min-height:13px;margin-bottom:10px;}
+.volRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.volRow span{font-size:8px;letter-spacing:1px;color:rgba(0,212,255,0.5);min-width:58px;}
+.volSlider{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:rgba(0,212,255,0.2);outline:none;}
+.volSlider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#00d4ff;cursor:pointer;box-shadow:0 0 6px rgba(0,212,255,0.5);}
+.sfxToggleRow{display:flex;align-items:center;justify-content:space-between;margin-top:4px;}
+.sfxToggleRow span{font-size:8px;letter-spacing:2px;color:rgba(0,212,255,0.5);}
+.toggleBtn{background:transparent;border:1px solid rgba(0,212,255,0.3);border-radius:4px;color:rgba(0,212,255,0.7);font-size:8px;letter-spacing:1px;padding:5px 10px;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;}
+.toggleBtn.on{border-color:rgba(0,255,180,0.6);color:#00ffaa;background:rgba(0,255,180,0.08);}
 #ytFrame{display:none;width:0;height:0;}
+
+/* Audio permission modal */
+#audioPermModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+#audioPermCard{background:rgba(0,10,24,0.99);border:1px solid rgba(0,212,255,0.3);border-radius:16px;padding:28px 26px;max-width:340px;width:100%;text-align:center;}
+#audioPermCard h2{font-size:13px;letter-spacing:4px;color:#00d4ff;margin-bottom:12px;}
+#audioPermCard p{font-size:10px;color:rgba(180,210,240,0.75);line-height:1.8;margin-bottom:8px;letter-spacing:0.5px;}
+#audioPermCard .hint{font-size:9px;color:rgba(0,212,255,0.35);margin-bottom:22px;letter-spacing:1px;}
+.permBtns{display:flex;flex-direction:column;gap:10px;}
+#enableAudioBtn{background:rgba(0,212,255,0.1);border:2px solid rgba(0,212,255,0.7);border-radius:8px;color:#00d4ff;font-family:‘Orbitron’,monospace;font-size:12px;letter-spacing:3px;padding:14px 20px;cursor:pointer;-webkit-tap-highlight-color:transparent;animation:rpulse 2s ease-in-out infinite;}
+#enableAudioBtn:hover,#enableAudioBtn:active{background:rgba(0,212,255,0.2);box-shadow:0 0 24px rgba(0,212,255,0.4);animation:none;}
+#skipAudioBtn{background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.3);font-family:‘Orbitron’,monospace;font-size:9px;letter-spacing:2px;padding:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+#skipAudioBtn:hover{color:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.25);}
 
 /* Game over */
 .screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;z-index:50;}
@@ -93,9 +115,19 @@ Landscape: joystick left-edge center, thrust+fire right-edge center
 
 /* Joystick */
 #joystickWrap{position:absolute;pointer-events:all;width:120px;height:120px;}
-#joystickBase{position:absolute;inset:0;border-radius:50%;background:rgba(0,5,15,0.55);border:2px solid rgba(0,212,255,0.20);}
-#joystickThumb{position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(0,18,40,0.9);border:2px solid rgba(0,212,255,0.7);top:38px;left:38px;box-shadow:0 0 14px rgba(0,212,255,0.35);transition:box-shadow 0.1s;}
-#joystickThumb.active{box-shadow:0 0 22px rgba(0,212,255,0.65);}
+#joystickBase{display:none;}
+#joystickThumb{
+position:absolute;
+width:16px;height:16px;
+border-radius:50%;
+background:rgba(0,200,255,0.9);
+border:2px solid #fff;
+top:20px;left:52px;
+box-shadow:0 0 10px rgba(0,212,255,0.8),0 0 20px rgba(0,212,255,0.4);
+transition:box-shadow 0.1s;
+pointer-events:none;
+}
+#joystickThumb.active{box-shadow:0 0 16px rgba(0,255,220,1),0 0 32px rgba(0,212,255,0.6);}
 #jsZoneL,#jsZoneR{position:absolute;top:50%;transform:translateY(-50%);font-size:9px;color:rgba(0,212,255,0.22);pointer-events:none;}
 #jsZoneL{left:6px;}
 #jsZoneR{right:6px;}
@@ -132,7 +164,10 @@ Landscape: joystick left-edge center, thrust+fire right-edge center
   <div id="scoreBox"><span id="scoreLbl">SCORE</span><span id="scoreVal">0</span></div>
   <div id="waveBox">
     <span id="waveLbl">WAVE</span><span id="waveVal">1</span>
-    <button id="helpBtn">?</button>
+    <div style="display:flex;gap:5px;align-items:center;">
+      <button id="cogBtn" title="Settings" style="pointer-events:all;background:transparent;border:1px solid rgba(0,212,255,0.35);border-radius:50%;width:22px;height:22px;font-size:12px;color:rgba(0,212,255,0.65);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all 0.15s;">⚙</button>
+      <button id="helpBtn">?</button>
+    </div>
   </div>
 </div>
 <div id="warpHud"><span id="warpLbl">WARP CORES DELIVERED</span><span id="warpVal">0 / 4</span></div>
@@ -196,28 +231,107 @@ Landscape: joystick left-edge center, thrust+fire right-edge center
   </div>
 </div>
 
-<!-- Music panel -->
+<!-- Cog settings popup -->
 
-<div id="musicPanel">
-  <button id="musicToggle">♪ MUSIC</button>
-  <div id="musicDrawer">
-    <label>YOUTUBE VIDEO LINK</label>
-    <input id="ytInput" type="text" placeholder="Paste YouTube URL...">
-    <div id="ytBtns">
-      <button class="ytBtn" id="ytPlay">▶ PLAY</button>
-      <button class="ytBtn" id="ytStop">■ STOP</button>
-    </div>
-    <div id="musicStatus">No music loaded</div>
+<div id="cogMenuOverlay">
+  <div id="cogCard">
+    <button id="closeCog">✕</button>
+    <h2>⚙ SETTINGS</h2>
+
+```
+<div class="cogSection">
+  <label>MUSIC — YOUTUBE LINK</label>
+  <input id="ytInput" type="text" placeholder="Paste YouTube URL..." value="https://youtu.be/s1elN4L2h44?si=EQK9pR8xnpTBm-">
+  <div class="cogRow">
+    <button class="cogBtn" id="ytPlay">▶ PLAY</button>
+    <button class="cogBtn" id="ytStop">■ STOP</button>
   </div>
-  <iframe id="ytFrame" allow="autoplay"></iframe>
+  <div id="musicStatus">No music loaded</div>
+  <div class="volRow">
+    <span>MUSIC VOL</span>
+    <input type="range" class="volSlider" id="musicVol" min="0" max="100" value="60">
+  </div>
 </div>
+
+<div class="cogSection">
+  <label>SOUND EFFECTS</label>
+  <div class="volRow">
+    <span>SFX VOL</span>
+    <input type="range" class="volSlider" id="sfxVol" min="0" max="100" value="40">
+  </div>
+  <div class="sfxToggleRow">
+    <span>SFX ENABLED</span>
+    <button class="toggleBtn on" id="sfxToggle">ON</button>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- Audio permission modal -->
+
+<div id="audioPermModal">
+  <div id="audioPermCard">
+    <h2>🔊 ENABLE AUDIO</h2>
+    <p>This game has music and sound effects. Tap below to enable audio and start playing.</p>
+    <p class="hint">You can toggle sound on/off anytime via the ⚙ menu.</p>
+    <div class="permBtns">
+      <button id="enableAudioBtn">ENABLE AUDIO &amp; PLAY</button>
+      <button id="skipAudioBtn">Play without sound</button>
+    </div>
+  </div>
+</div>
+
+<iframe id="ytFrame" allow="autoplay"></iframe>
 
 <!-- Touch controls -->
 
 <div id="touchControls">
   <div id="joystickWrap">
-    <div id="joystickBase"></div>
-    <div id="joystickThumb" id="jsThumb"></div>
+    <!-- Fighter pilot joystick rendered as SVG -->
+    <svg id="jsSvg" width="120" height="120" viewBox="0 0 120 120" style="position:absolute;inset:0;pointer-events:none;">
+      <!-- Base plate -->
+      <ellipse cx="60" cy="100" rx="44" ry="14" fill="rgba(10,20,40,0.85)" stroke="rgba(0,212,255,0.25)" stroke-width="1.5"/>
+      <!-- Base ring shine -->
+      <ellipse cx="60" cy="100" rx="44" ry="14" fill="none" stroke="rgba(0,212,255,0.12)" stroke-width="4"/>
+      <!-- Grip body (tall cylinder) -->
+      <rect x="46" y="38" width="28" height="58" rx="14" fill="url(#gripGrad)" stroke="rgba(0,212,255,0.3)" stroke-width="1.2"/>
+      <!-- Grip texture lines -->
+      <line x1="50" y1="50" x2="70" y2="50" stroke="rgba(0,212,255,0.12)" stroke-width="1"/>
+      <line x1="50" y1="58" x2="70" y2="58" stroke="rgba(0,212,255,0.12)" stroke-width="1"/>
+      <line x1="50" y1="66" x2="70" y2="66" stroke="rgba(0,212,255,0.12)" stroke-width="1"/>
+      <line x1="50" y1="74" x2="70" y2="74" stroke="rgba(0,212,255,0.12)" stroke-width="1"/>
+      <line x1="50" y1="82" x2="70" y2="82" stroke="rgba(0,212,255,0.12)" stroke-width="1"/>
+      <!-- Neck taper -->
+      <rect x="50" y="28" width="20" height="14" rx="6" fill="url(#neckGrad)" stroke="rgba(0,212,255,0.25)" stroke-width="1"/>
+      <!-- Top dome (metallic) -->
+      <ellipse cx="60" cy="28" rx="18" ry="12" fill="url(#domeGrad)" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+      <!-- Dome highlight -->
+      <ellipse cx="55" cy="24" rx="7" ry="4" fill="rgba(255,255,255,0.12)"/>
+      <!-- Thumb rest indent -->
+      <ellipse cx="60" cy="28" rx="8" ry="5" fill="rgba(0,10,25,0.6)" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+      <defs>
+        <linearGradient id="gripGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#0a1828"/>
+          <stop offset="30%" stop-color="#1a3050"/>
+          <stop offset="70%" stop-color="#1a3050"/>
+          <stop offset="100%" stop-color="#0a1828"/>
+        </linearGradient>
+        <linearGradient id="neckGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#0a1828"/>
+          <stop offset="50%" stop-color="#243a55"/>
+          <stop offset="100%" stop-color="#0a1828"/>
+        </linearGradient>
+        <radialGradient id="domeGrad" cx="40%" cy="35%">
+          <stop offset="0%" stop-color="#3a6080"/>
+          <stop offset="60%" stop-color="#1a3050"/>
+          <stop offset="100%" stop-color="#0a1828"/>
+        </radialGradient>
+      </defs>
+    </svg>
+    <!-- Movable thumb indicator (the part that moves) -->
+    <div id="joystickThumb"></div>
     <span id="jsZoneL">◀</span>
     <span id="jsZoneR">▶</span>
   </div>
@@ -330,16 +444,16 @@ function initJoystick(){
     var nx=dx/JS_R; // -1..1
     btn.left=(nx<-DEAD);
     btn.right=(nx>DEAD);
-    // move thumb visual
-    thumb.style.left=(60+dx-22)+'px';
-    thumb.style.top=(60+dy-22)+'px';
+    // move thumb visual — centered on dome top (60,28 in SVG = 52,20 in px accounting for 8px radius)
+    thumb.style.left=(52+dx-8)+'px';
+    thumb.style.top=(20+dy-8)+'px';
   }
   function end(e){
     e.preventDefault();
     active=false;pid=-1;
     btn.left=false;btn.right=false;
     thumb.classList.remove('active');
-    thumb.style.left='38px';thumb.style.top='38px';
+    thumb.style.left='52px';thumb.style.top='20px';
   }
 
   wrap.addEventListener('pointerdown',start,{passive:false});
@@ -368,6 +482,215 @@ bindBtn('bFire','fire');
 var isTouchDev=('ontouchstart' in window||navigator.maxTouchPoints>0);
 
 /* ════════════════════════════════════════════════════════════
+   COG MENU
+   ════════════════════════════════════════════════════════════ */
+document.getElementById('cogBtn').addEventListener('click',function(){
+  document.getElementById('cogMenuOverlay').classList.add('show');
+});
+document.getElementById('closeCog').addEventListener('click',function(){
+  document.getElementById('cogMenuOverlay').classList.remove('show');
+});
+document.getElementById('cogMenuOverlay').addEventListener('click',function(e){
+  if(e.target===this)this.classList.remove('show');
+});
+
+/* ════════════════════════════════════════════════════════════
+   AUDIO SYSTEM
+   ════════════════════════════════════════════════════════════ */
+var audioCtx=null;
+var audioUnlocked=false;
+var sfxEnabled=true;
+var sfxVolume=0.40;
+var musicVolume=0.60;
+var ytPlayer=null;
+var DEFAULT_YT='https://youtu.be/s1elN4L2h44';
+
+function unlockAudio(withMusic){
+  if(audioUnlocked)return;
+  try{
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    // Resume if suspended (iOS requirement)
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    audioUnlocked=true;
+  }catch(e){console.warn('Web Audio unavailable',e);}
+  if(withMusic) loadYT(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
+}
+
+/* ── Web Audio SFX ──────────────────────────────────────── */
+var thrustNode=null,thrustGain=null,thrustActive=false;
+
+function sfxFire(){
+  if(!audioUnlocked||!sfxEnabled||!audioCtx)return;
+  try{
+    var o=audioCtx.createOscillator();
+    var g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    o.type='sine';
+    // Softer, lower pitch — starts at 700 drops to 180
+    o.frequency.setValueAtTime(700,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(180,audioCtx.currentTime+0.10);
+    g.gain.setValueAtTime(sfxVolume*0.18,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.11);
+    o.start();o.stop(audioCtx.currentTime+0.11);
+  }catch(e){}
+}
+
+function sfxThrustStart(){
+  if(!audioUnlocked||!sfxEnabled||!audioCtx||thrustActive)return;
+  try{
+    thrustNode=audioCtx.createOscillator();
+    thrustGain=audioCtx.createGain();
+    var filter=audioCtx.createBiquadFilter();
+    filter.type='lowpass';filter.frequency.value=160;
+    thrustNode.connect(filter);filter.connect(thrustGain);thrustGain.connect(audioCtx.destination);
+    thrustNode.type='sawtooth';
+    thrustNode.frequency.setValueAtTime(65,audioCtx.currentTime);
+    // Louder single burst
+    thrustGain.gain.setValueAtTime(0,audioCtx.currentTime);
+    thrustGain.gain.linearRampToValueAtTime(sfxVolume*0.85,audioCtx.currentTime+0.03);
+    thrustGain.gain.linearRampToValueAtTime(sfxVolume*0.55,audioCtx.currentTime+0.14);
+    thrustGain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.30);
+    thrustNode.start();
+    thrustNode.stop(audioCtx.currentTime+0.32);
+    thrustActive=true;
+    setTimeout(function(){thrustActive=false;thrustNode=null;thrustGain=null;},340);
+  }catch(e){thrustActive=false;}
+}
+
+function sfxExplosion(big){
+  // Asteroid explosion — deep low rumble, heavily low-pass filtered
+  if(!audioUnlocked||!sfxEnabled||!audioCtx)return;
+  try{
+    var dur=big?0.75:0.40;
+    var buf=audioCtx.createBuffer(1,Math.floor(audioCtx.sampleRate*dur),audioCtx.sampleRate);
+    var d=buf.getChannelData(0);
+    for(var i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,big?0.45:0.65);
+    var src=audioCtx.createBufferSource();
+    var g=audioCtx.createGain();
+    var filt=audioCtx.createBiquadFilter();
+    // Very low cutoff for a deep rumble — 150Hz for big, 280Hz for small
+    filt.type='lowpass';filt.frequency.value=big?150:280;
+    filt.Q.value=2.0;
+    src.buffer=buf;src.connect(filt);filt.connect(g);g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(sfxVolume*(big?0.9:0.6),audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    src.start();
+  }catch(e){}
+}
+
+function sfxShipExplosion(){
+  // Ship-specific explosion — bigger, longer, with a low pitch drop for drama
+  if(!audioUnlocked||!sfxEnabled||!audioCtx)return;
+  try{
+    // Layer 1: deep noise boom
+    var dur=1.2;
+    var buf=audioCtx.createBuffer(1,Math.floor(audioCtx.sampleRate*dur),audioCtx.sampleRate);
+    var d=buf.getChannelData(0);
+    for(var i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,0.35);
+    var src=audioCtx.createBufferSource();
+    var g=audioCtx.createGain();
+    var filt=audioCtx.createBiquadFilter();
+    filt.type='lowpass';filt.frequency.value=200;filt.Q.value=3;
+    src.buffer=buf;src.connect(filt);filt.connect(g);g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(sfxVolume*1.1,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    src.start();
+    // Layer 2: descending tone for drama
+    var o=audioCtx.createOscillator();
+    var og=audioCtx.createGain();
+    o.connect(og);og.connect(audioCtx.destination);
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(140,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(28,audioCtx.currentTime+0.9);
+    og.gain.setValueAtTime(sfxVolume*0.55,audioCtx.currentTime);
+    og.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.9);
+    o.start();o.stop(audioCtx.currentTime+0.9);
+  }catch(e){}
+}
+
+function sfxAlienSpawn(){
+  if(!audioUnlocked||!sfxEnabled||!audioCtx)return;
+  try{
+    var o=audioCtx.createOscillator();
+    var g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    o.type='square';
+    o.frequency.setValueAtTime(200,audioCtx.currentTime);
+    o.frequency.linearRampToValueAtTime(900,audioCtx.currentTime+0.1);
+    o.frequency.linearRampToValueAtTime(300,audioCtx.currentTime+0.2);
+    o.frequency.linearRampToValueAtTime(700,audioCtx.currentTime+0.32);
+    g.gain.setValueAtTime(sfxVolume*0.28,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.36);
+    o.start();o.stop(audioCtx.currentTime+0.36);
+  }catch(e){}
+}
+
+/* ── YouTube music ──────────────────────────────────────── */
+function ytId(url){
+  try{var m=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m?m[1]:null;}catch(e){return null;}
+}
+function loadYT(url){
+  var id=ytId(url);
+  if(!id){document.getElementById('musicStatus').textContent='Invalid YouTube URL';return;}
+  var vol=Math.round(musicVolume*100);
+  document.getElementById('ytFrame').src=
+    'https://www.youtube.com/embed/'+id+
+    '?autoplay=1&loop=1&playlist='+id+'&controls=0&mute=0&volume='+vol;
+  document.getElementById('musicStatus').textContent='▶ Playing';
+}
+function stopYT(){
+  document.getElementById('ytFrame').src='';
+  document.getElementById('musicStatus').textContent='■ Stopped';
+}
+
+document.getElementById('ytPlay').addEventListener('click',function(){
+  var url=document.getElementById('ytInput').value.trim()||DEFAULT_YT;
+  if(audioUnlocked)loadYT(url);
+  else{unlockAudio(false);loadYT(url);}
+});
+document.getElementById('ytStop').addEventListener('click',stopYT);
+
+document.getElementById('musicVol').addEventListener('input',function(){
+  musicVolume=this.value/100;
+  // Reload with new volume if playing
+  var src=document.getElementById('ytFrame').src;
+  if(src&&src.length>10){
+    var url=document.getElementById('ytInput').value.trim()||DEFAULT_YT;
+    loadYT(url);
+  }
+});
+document.getElementById('sfxVol').addEventListener('input',function(){
+  sfxVolume=this.value/100;
+});
+document.getElementById('sfxToggle').addEventListener('click',function(){
+  sfxEnabled=!sfxEnabled;
+  this.textContent=sfxEnabled?'ON':'OFF';
+  this.classList.toggle('on',sfxEnabled);
+});
+
+/* ── Audio permission modal ─────────────────────────────── */
+var audioPermShown=false;
+function showAudioPerm(){
+  document.getElementById('audioPermModal').style.display='flex';
+  audioPermShown=true;
+}
+function hideAudioPerm(){
+  document.getElementById('audioPermModal').style.display='none';
+}
+document.getElementById('enableAudioBtn').addEventListener('click',function(){
+  hideAudioPerm();
+  unlockAudio(true);
+  startGame();
+});
+document.getElementById('skipAudioBtn').addEventListener('click',function(){
+  hideAudioPerm();
+  sfxEnabled=false;
+  document.getElementById('sfxToggle').textContent='OFF';
+  document.getElementById('sfxToggle').classList.remove('on');
+  startGame();
+});
+
+/* ════════════════════════════════════════════════════════════
    HELP OVERLAY
    ════════════════════════════════════════════════════════════ */
 document.getElementById('helpBtn').addEventListener('click',function(){
@@ -379,32 +702,6 @@ document.getElementById('helpBtn').addEventListener('click',function(){
 });
 document.getElementById('closeHelp').addEventListener('click',function(){document.getElementById('helpOverlay').classList.remove('show');});
 document.getElementById('helpOverlay').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
-
-/* ════════════════════════════════════════════════════════════
-   MUSIC
-   ════════════════════════════════════════════════════════════ */
-document.getElementById('musicToggle').addEventListener('click',function(){
-  document.getElementById('musicDrawer').classList.toggle('open');
-});
-function ytId(url){
-  try{var m=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m?m[1]:null;}catch(e){return null;}
-}
-function playYT(url){
-  var id=ytId(url);
-  if(!id){document.getElementById('musicStatus').textContent='Invalid YouTube URL';return;}
-  document.getElementById('ytFrame').src='https://www.youtube.com/embed/'+id+'?autoplay=1&loop=1&playlist='+id+'&controls=0';
-  document.getElementById('musicStatus').textContent='▶ Playing — allow autoplay if prompted';
-}
-function stopYT(){
-  document.getElementById('ytFrame').src='';
-  document.getElementById('musicStatus').textContent='■ Stopped';
-}
-document.getElementById('ytPlay').addEventListener('click',function(){
-  var url=document.getElementById('ytInput').value.trim();
-  if(!url){document.getElementById('musicStatus').textContent='Paste a YouTube URL first';return;}
-  playYT(url);
-});
-document.getElementById('ytStop').addEventListener('click',stopYT);
 
 /* ════════════════════════════════════════════════════════════
    UTILS
@@ -523,7 +820,7 @@ var ALIEN_KEYS=['red','blue','green','yellow'];
 function initGalaga(){
   gAsteroids=[];gAliens=[];gKilled=0;gSpawnTimer=0;
   gSpawnInterval=Math.max(750,1400-Math.floor((wave-1)/4)*100);
-  GALAGA_SHIP_Y=H-85;
+  GALAGA_SHIP_Y=H-(window.innerWidth<window.innerHeight?H*0.22:85);
   ship.x=CX;ship.y=GALAGA_SHIP_Y;ship.vx=0;ship.vy=0;ship.angle=-Math.PI/2;
   buildParallax();
 }
@@ -678,6 +975,7 @@ function killShip(){
   if(!ship.alive)return;
   if(ship.carrying){ship.carrying.picked=false;ship.carrying=null;}
   ship.alive=false;ship.trail=[];
+  sfxShipExplosion();
   spawnParts(ship.x,ship.y,22,['#00d4ff','#ffffff','#88eeff'],4.5);
   lives--;updateLives();
   if(lives<=0){setTimeout(doGameOver,1300);}
@@ -782,6 +1080,7 @@ function update(dt){
         vx:ship.vx+Math.cos(ship.angle)*7.5,vy:ship.vy+Math.sin(ship.angle)*7.5,life:58});
     }
     fireCool=185;
+    sfxFire();
   }
   fireLast=fireNow;
 
@@ -798,7 +1097,7 @@ function update(dt){
       if(keys['ArrowRight']||keys['KeyD']||btn.right) ship.angle+=0.065;
       var thr=keys['ArrowUp']||keys['KeyW']||btn.thrust;
       ship.thrusting=thr;
-      if(thr){ship.vx+=Math.cos(ship.angle)*0.2;ship.vy+=Math.sin(ship.angle)*0.2;}
+      if(thr){ship.vx+=Math.cos(ship.angle)*0.2;ship.vy+=Math.sin(ship.angle)*0.2;sfxThrustStart();}
       ship.vx*=0.985;ship.vy*=0.985;
       var spd=Math.sqrt(ship.vx*ship.vx+ship.vy*ship.vy);
       if(spd>7.5){ship.vx=ship.vx/spd*7.5;ship.vy=ship.vy/spd*7.5;}
@@ -933,17 +1232,17 @@ function update(dt){
           bullets.splice(bi4,1);ga.alive=false;gKilled++;
           score+=ga.size===3?20:50;document.getElementById('scoreVal').textContent=score;
           spawnParts(ga.x,ga.y,12,ga.cols,3.5);
-          // Split large into 2 mediums that also fall
+          sfxExplosion(ga.size===3);
           if(ga.size===3){
             for(var sm2=0;sm2<2;sm2++){
               var verts2=rndI(7,12),offs2=[];for(var oi=0;oi<verts2;oi++)offs2.push(rnd(0.6,1.0));
               gAsteroids.push({x:ga.x+rnd(-15,15),y:ga.y,vx:rnd(-0.8,0.8),vy:rnd(0.9,1.8),
                 rot:rnd(0,Math.PI*2),rotV:rnd(-0.025,0.025),r:rnd(15,23),size:2,cols:randCols(),
                 verts:verts2,offs:offs2,alive:true,isMed:true});
-              if(Math.random()<0.20){spawnAlien(ga.x+rnd(-25,25),ga.y,ALIEN_KEYS[rndI(0,3)]);}
+              if(Math.random()<0.20){spawnAlien(ga.x+rnd(-25,25),ga.y,ALIEN_KEYS[rndI(0,3)]);sfxAlienSpawn();}
             }
           } else if(ga.isMed&&Math.random()<0.20){
-            spawnAlien(ga.x,ga.y,ALIEN_KEYS[rndI(0,3)]);
+            spawnAlien(ga.x,ga.y,ALIEN_KEYS[rndI(0,3)]);sfxAlienSpawn();
           }
           hitG=true;break;
         }
@@ -1068,6 +1367,7 @@ function update(dt){
           if(ast4.isSolar)pts=150;
           score+=pts;document.getElementById('scoreVal').textContent=score;
           spawnParts(ast4.x,ast4.y,12,ast4.cols,3.5);
+          sfxExplosion(ast4.size===3);
           if(!ast4.isSolar)splitAst(ast4);
           for(var sai=solarActive.length-1;sai>=0;sai--){if(solarActive[sai].ast===ast4){solarActive.splice(sai,1);break;}}
           hitA=true;break;
@@ -1386,7 +1686,7 @@ if(isTouchDev){
 document.getElementById('hiVal').textContent='0';
 lastTime=performance.now();
 requestAnimationFrame(loop);
-startGame();
+showAudioPerm(); // show permission modal first; startGame() called from modal buttons
 
 })();
 </script>
