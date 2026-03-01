@@ -668,8 +668,23 @@ function stopYT(){
 
 document.getElementById('ytPlay').addEventListener('click',function(){
   var url=document.getElementById('ytInput').value.trim()||DEFAULT_YT;
-  if(audioUnlocked){loadYT(url);}
-  else{unlockAudio(false);loadYT(url);}
+  // Must be called directly in gesture for Safari
+  if(!audioUnlocked){
+    try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();audioUnlocked=true;}catch(e){}
+  }
+  if(ytPlayer&&ytPlayer.unMute){
+    var info=ytExtract(url);
+    if(!info){document.getElementById('musicStatus').textContent='Invalid URL';return;}
+    if(info.type==='playlist'){ytPlayer.loadPlaylist({listType:'playlist',list:info.id});}
+    else{ytPlayer.loadVideoById(info.id);}
+    ytPlayer.unMute();
+    ytPlayer.setVolume(Math.round(musicVolume*100));
+    ytPlayer.playVideo();
+    document.getElementById('musicStatus').textContent='▶ Playing';
+  } else {
+    ytPendingPlay=true;
+    document.getElementById('musicStatus').textContent='Loading…';
+  }
 });
 document.getElementById('ytStop').addEventListener('click',stopYT);
 
@@ -697,8 +712,24 @@ function hideAudioPerm(){
 }
 document.getElementById('enableAudioBtn').addEventListener('click',function(){
   hideAudioPerm();
-  ytPendingPlay=true; // ensure music starts when YT player is ready
-  unlockAudio(true);
+  // Unlock Web Audio (SFX) directly in gesture
+  if(!audioUnlocked){
+    try{
+      audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended')audioCtx.resume();
+      audioUnlocked=true;
+    }catch(e){}
+  }
+  // Unlock YouTube directly in gesture — mirrors Garbage Man's working pattern
+  if(ytPlayer&&ytPlayer.unMute){
+    ytPlayer.unMute();
+    ytPlayer.setVolume(Math.round(musicVolume*100));
+    ytPlayer.playVideo();
+    document.getElementById('musicStatus').textContent='▶ Playing';
+  } else {
+    // YT API not ready yet — flag for onReady callback
+    ytPendingPlay=true;
+  }
   startGame();
 });
 document.getElementById('skipAudioBtn').addEventListener('click',function(){
@@ -998,7 +1029,7 @@ function killShip(){
   spawnParts(ship.x,ship.y,22,['#00d4ff','#ffffff','#88eeff'],4.5);
   lives--;updateLives();
   if(lives<=0){setTimeout(doGameOver,1300);}
-  else{setTimeout(function(){resetShip(true);/* no shield on death respawn */},1700);}
+  else{setTimeout(function(){resetShip(true);transitionShield=2000;},1700);}
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1781,7 +1812,7 @@ function onYouTubeIframeAPIReady(){
   ytReady=true;
   var info=ytExtract(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
   if(!info)return;
-  var pvars={autoplay:0,playsinline:1,controls:0,mute:1};
+  var pvars={autoplay:1,playsinline:1,controls:0,mute:1};
   if(info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;}
   else{pvars.loop=1;pvars.playlist=info.id;}
   ytPlayer=new YT.Player('ytPlayerContainer',{
