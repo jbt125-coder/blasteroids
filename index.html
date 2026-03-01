@@ -153,6 +153,8 @@ pointer-events:none;
 }
 </style>
 
+<script src="https://www.youtube.com/iframe_api"></script>
+
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
@@ -283,7 +285,7 @@ pointer-events:none;
   </div>
 </div>
 
-<iframe id="ytFrame" allow="autoplay"></iframe>
+<div id="ytPlayerContainer" style="display:none;width:0;height:0;overflow:hidden;position:absolute;"></div>
 
 <!-- Touch controls -->
 
@@ -509,11 +511,21 @@ function unlockAudio(withMusic){
   if(audioUnlocked)return;
   try{
     audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    // Resume if suspended (iOS requirement)
     if(audioCtx.state==='suspended')audioCtx.resume();
     audioUnlocked=true;
   }catch(e){console.warn('Web Audio unavailable',e);}
-  if(withMusic) loadYT(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
+  if(withMusic){
+    // This runs inside a user gesture — YT API will allow unmuted playback
+    if(ytPlayer&&ytPlayer.unMute){
+      ytPlayer.unMute();
+      ytPlayer.setVolume(Math.round(musicVolume*100));
+      ytPlayer.playVideo();
+      document.getElementById('musicStatus').textContent='▶ Playing';
+    } else {
+      // Player not ready yet — flag it so onReady fires with unmuted play
+      ytPendingPlay=true;
+    }
+  }
 }
 
 /* ── Web Audio SFX ──────────────────────────────────────── */
@@ -625,39 +637,82 @@ function sfxAlienSpawn(){
   }catch(e){}
 }
 
-/* ── YouTube music ──────────────────────────────────────── */
+/* ── YouTube IFrame Player API ──────────────────────────── */
+var ytPlayer=null;
+var ytReady=false;
+var ytPendingPlay=false;
+
+// Called automatically by YouTube API when script loads
+window.onYouTubeIframeAPIReady=function(){
+  ytReady=true;
+  var id=ytId(document.getElementById('ytInput').value.trim()||DEFAULT_YT);
+  if(!id)return;
+  ytPlayer=new YT.Player('ytPlayerContainer',{
+    height:'0',width:'0',
+    videoId:id,
+    playerVars:{autoplay:0,loop:1,playlist:id,playsinline:1,controls:0,mute:1},
+    events:{
+      onReady:function(e){
+        // Unmute and set volume as soon as ready
+        e.target.setVolume(Math.round(musicVolume*100));
+        if(ytPendingPlay){e.target.unMute();e.target.playVideo();ytPendingPlay=false;}
+      },
+      onStateChange:function(e){
+        // Auto-restart if ended
+        if(e.data===YT.PlayerState.ENDED)e.target.playVideo();
+      }
+    }
+  });
+};
+
 function ytId(url){
   try{var m=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m?m[1]:null;}catch(e){return null;}
 }
+
 function loadYT(url){
   var id=ytId(url);
-  if(!id){document.getElementById('musicStatus').textContent='Invalid YouTube URL';return;}
-  var vol=Math.round(musicVolume*100);
-  document.getElementById('ytFrame').src=
-    'https://www.youtube.com/embed/'+id+
-    '?autoplay=1&loop=1&playlist='+id+'&controls=0&mute=0&volume='+vol;
-  document.getElementById('musicStatus').textContent='▶ Playing';
+  if(!id){document.getElementById('musicStatus').textContent='Invalid URL';return;}
+  if(ytPlayer&&ytPlayer.loadVideoById){
+    ytPlayer.loadVideoById(id);
+    ytPlayer.unMute();
+    ytPlayer.setVolume(Math.round(musicVolume*100));
+    ytPlayer.playVideo();
+    document.getElementById('musicStatus').textContent='▶ Playing';
+  } else if(ytReady){
+    // Recreate player with new video
+    ytPlayer=new YT.Player('ytPlayerContainer',{
+      height:'0',width:'0',
+      videoId:id,
+      playerVars:{autoplay:1,loop:1,playlist:id,playsinline:1,controls:0,mute:0},
+      events:{
+        onReady:function(e){
+          e.target.setVolume(Math.round(musicVolume*100));
+          e.target.unMute();e.target.playVideo();
+          document.getElementById('musicStatus').textContent='▶ Playing';
+        },
+        onStateChange:function(e){if(e.data===YT.PlayerState.ENDED)e.target.playVideo();}
+      }
+    });
+  } else {
+    document.getElementById('musicStatus').textContent='API loading…';
+  }
 }
+
 function stopYT(){
-  document.getElementById('ytFrame').src='';
+  if(ytPlayer&&ytPlayer.pauseVideo){ytPlayer.pauseVideo();ytPlayer.mute();}
   document.getElementById('musicStatus').textContent='■ Stopped';
 }
 
 document.getElementById('ytPlay').addEventListener('click',function(){
   var url=document.getElementById('ytInput').value.trim()||DEFAULT_YT;
-  if(audioUnlocked)loadYT(url);
+  if(audioUnlocked){loadYT(url);}
   else{unlockAudio(false);loadYT(url);}
 });
 document.getElementById('ytStop').addEventListener('click',stopYT);
 
 document.getElementById('musicVol').addEventListener('input',function(){
   musicVolume=this.value/100;
-  // Reload with new volume if playing
-  var src=document.getElementById('ytFrame').src;
-  if(src&&src.length>10){
-    var url=document.getElementById('ytInput').value.trim()||DEFAULT_YT;
-    loadYT(url);
-  }
+  if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(Math.round(musicVolume*100));
 });
 document.getElementById('sfxVol').addEventListener('input',function(){
   sfxVolume=this.value/100;
@@ -679,6 +734,7 @@ function hideAudioPerm(){
 }
 document.getElementById('enableAudioBtn').addEventListener('click',function(){
   hideAudioPerm();
+  ytPendingPlay=true; // ensure music starts when YT player is ready
   unlockAudio(true);
   startGame();
 });
